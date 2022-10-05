@@ -2,7 +2,6 @@ use iced::{Length, Alignment};
 use iced::alignment::Horizontal;
 use iced::pure::{Element, column, text, container, button};
 
-use super::BaseMessage;
 use crate::style::TextButton;
 
 #[derive(Debug, Clone)]

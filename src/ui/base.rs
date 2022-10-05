@@ -50,6 +50,7 @@ impl Sandbox for Base {
             .height(Length::Fill)
             .width(Length::Fill)
             .center_x()
+            .padding(10)
             .into();
     }
 }
