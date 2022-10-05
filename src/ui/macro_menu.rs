@@ -1,7 +1,7 @@
 use iced::Length;
 use iced::pure::{Element, text, button, row, container};
 
-use crate::style::{PlusButton, BorderedContainer};
+use super::style::{PlusButton, BorderedContainer};
 
 use super::{BaseMessage, MainMenuMessage};
 

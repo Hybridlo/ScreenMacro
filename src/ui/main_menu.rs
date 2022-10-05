@@ -2,7 +2,7 @@ use iced::{Length, Alignment};
 use iced::alignment::Horizontal;
 use iced::pure::{Element, column, text, container, button};
 
-use crate::style::TextButton;
+use super::style::TextButton;
 
 #[derive(Debug, Clone)]
 pub enum MainMenuMessage {
