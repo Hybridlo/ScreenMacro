@@ -36,7 +36,6 @@ impl Sandbox for Base {
     }
 
     fn update(&mut self, message: Self::Message) {
-        println!("{:?}", message);
         match message {
             BaseMessage::MainMenuMessage(_) => self.selected = WindowShowing::MacroMenu,
             BaseMessage::MacroMenuMessage(msg) => self.macromenu.update(msg),

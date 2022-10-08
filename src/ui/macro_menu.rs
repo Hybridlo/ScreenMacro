@@ -21,7 +21,6 @@ impl MacroMenu {
     }
 
     pub fn update(&mut self, msg: MacroMenuMessage) {
-        println!("{:?}", msg);
         match msg {
             MacroMenuMessage::NewVal(val, index) => self.macro_step = val,
         }
@@ -44,7 +43,8 @@ impl MacroMenu {
         )
         .width(Length::FillPortion(6))
         .height(Length::Fill)
-        .style(BorderedContainer::Nothing);
+        .style(BorderedContainer::Nothing)
+        .padding(10);
 
 
 
