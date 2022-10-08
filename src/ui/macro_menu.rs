@@ -1,18 +1,53 @@
 use iced::Length;
-use iced::pure::{Element, text, button, row, container};
+use iced::pure::{Element, text, button, row, container, column};
 
+use crate::macro_logic::MacroStep;
+
+use super::components::macro_step_component;
 use super::style::{PlusButton, BorderedContainer};
 
-use super::{BaseMessage, MainMenuMessage};
+#[derive(Debug, Clone)]
+pub enum MacroMenuMessage {
+    NewVal(MacroStep, usize)
+}
 
-pub struct MacroMenu {}
+pub struct MacroMenu {
+    macro_step: MacroStep
+}
 
 impl MacroMenu {
     pub fn new() -> MacroMenu {
-        MacroMenu {}
+        MacroMenu { macro_step: Default::default() }
     }
 
-    pub fn view(&self) -> Element<BaseMessage> {
+    pub fn update(&mut self, msg: MacroMenuMessage) {
+        println!("{:?}", msg);
+        match msg {
+            MacroMenuMessage::NewVal(val, index) => self.macro_step = val,
+        }
+    }
+
+    pub fn view(&self) -> Element<MacroMenuMessage> {
+        let macro_container = container(
+            column()
+                .push(
+                    button(
+                        text("+").size(24)
+                    )
+                    .style(PlusButton::Normal)
+                    .width(Length::Shrink)
+                    .height(Length::Shrink)
+                )
+                .push(
+                    macro_step_component(0, Some(self.macro_step.clone()), MacroMenuMessage::NewVal)
+                )
+        )
+        .width(Length::FillPortion(6))
+        .height(Length::Fill)
+        .style(BorderedContainer::Nothing);
+
+
+
         row()
         .push(
             container(
@@ -21,18 +56,7 @@ impl MacroMenu {
             .width(Length::FillPortion(1))
         )
         .push(
-            container(
-                button(
-                    text("+").size(24)
-                )
-                .style(PlusButton::Normal)
-                .on_press(BaseMessage::MainMenuMessage(MainMenuMessage::LoadButtonClicked))
-                .width(Length::Shrink)
-                .height(Length::Shrink)
-            )
-            .width(Length::FillPortion(6))
-            .height(Length::Fill)
-            .style(BorderedContainer::Nothing)
+           macro_container 
         ).push(
             container(
                 text("lol")

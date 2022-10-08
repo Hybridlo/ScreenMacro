@@ -4,7 +4,7 @@ use iced::pure::{Element, column, text, container, button};
 
 use super::style::TextButton;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MainMenuMessage {
     NewButtonClicked,
     LoadButtonClicked
@@ -30,6 +30,7 @@ impl MainMenu {
                     .align_x(Horizontal::Left)
                     .center_y()
                 )
+
                 .push(
                     container(
                         text("Macro")
@@ -40,6 +41,7 @@ impl MainMenu {
                     .align_x(Horizontal::Right)
                     .center_y()
                 )
+                
                 .height(Length::Units(128))
                 .width(Length::Units(168))
         )
@@ -58,6 +60,7 @@ impl MainMenu {
                     .style(TextButton::Normal)
                     .on_press(MainMenuMessage::NewButtonClicked)
                 )
+
                 .push(
                     button(
                             text("Load macro")
@@ -66,6 +69,7 @@ impl MainMenu {
                     .style(TextButton::Normal)
                     .on_press(MainMenuMessage::LoadButtonClicked)
                 )
+
                 .height(Length::Shrink)
                 .align_items(Alignment::Center)
                 .spacing(12)

@@ -1,12 +1,12 @@
 use iced::{pure::{Sandbox, container, Element}, Length};
 
-use super::{MainMenu, MainMenuMessage, MacroMenu};
+use super::{MainMenu, MainMenuMessage, MacroMenu, MacroMenuMessage};
 
 
 pub struct Base {
     selected: WindowShowing,
     mainmenu: MainMenu,
-    macromenu: MacroMenu,
+    macromenu: MacroMenu
 }
 
 enum WindowShowing {
@@ -16,7 +16,8 @@ enum WindowShowing {
 
 #[derive(Debug, Clone)]
 pub enum BaseMessage {
-    MainMenuMessage(MainMenuMessage)
+    MainMenuMessage(MainMenuMessage),
+    MacroMenuMessage(MacroMenuMessage)
 }
 
 impl Sandbox for Base {
@@ -35,8 +36,10 @@ impl Sandbox for Base {
     }
 
     fn update(&mut self, message: Self::Message) {
+        println!("{:?}", message);
         match message {
-            BaseMessage::MainMenuMessage(_) => self.selected = WindowShowing::MacroMenu
+            BaseMessage::MainMenuMessage(_) => self.selected = WindowShowing::MacroMenu,
+            BaseMessage::MacroMenuMessage(msg) => self.macromenu.update(msg),
         }
     }
 
@@ -44,13 +47,13 @@ impl Sandbox for Base {
         return container(
             match self.selected {
                 WindowShowing::Start => self.mainmenu.view().map(BaseMessage::MainMenuMessage),
-                WindowShowing::MacroMenu => self.macromenu.view(),     // might have more later
+                WindowShowing::MacroMenu => self.macromenu.view().map(BaseMessage::MacroMenuMessage),     // might have more later
             }
         )
-            .height(Length::Fill)
-            .width(Length::Fill)
-            .center_x()
-            .padding(10)
-            .into();
+        .height(Length::Fill)
+        .width(Length::Fill)
+        .center_x()
+        .padding(10)
+        .into();
     }
 }
