@@ -74,7 +74,6 @@ where
                     image(handle)
                 )
                 .width(Length::Fill)
-                .max_height(300)    //this won't work now, will be fixed in iced 0.5
                 .center_x()
                 .center_y()
             );

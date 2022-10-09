@@ -1,31 +1,33 @@
-use iced::{pure::{container, row, pick_list, text, button}, Length, Alignment};
+use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alignment, alignment::Vertical};
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
 use image::RgbaImage;
 
-use crate::macro_logic::MacroStep;
+use crate::{macro_logic::MacroStep, ui::style::BorderedContainer};
 use crate::ui::style::TextButton;
 
 use super::{file_choose_component, percent_text_input, image_input_component};
 
 pub struct MacroStepComponent<Message> {
-    step_index: usize,
+    my_index: usize,
     value: MacroStep,
-    on_change: Box<dyn Fn(MacroStep, usize) -> Message>
+    on_change: Box<dyn Fn(MacroStep, usize) -> Message>,
+    on_remove: Box<dyn Fn(usize) -> Message>
 }
 
 impl<Message> MacroStepComponent<Message> {
     pub fn new(
         step_index: usize,
         value: Option<MacroStep>,
-        on_change: impl Fn(MacroStep, usize) -> Message + 'static
+        on_change: impl Fn(MacroStep, usize) -> Message + 'static,
+        on_remove: impl Fn(usize) -> Message + 'static
     ) -> Self {
         if let Some(value) = value {
-            return Self { step_index, value, on_change: Box::new(on_change) };
+            return Self { my_index: step_index, value, on_change: Box::new(on_change), on_remove: Box::new(on_remove) };
         }
 
-        Self { step_index, value: Default::default(), on_change: Box::new(on_change) }
+        Self { my_index: step_index, value: Default::default(), on_change: Box::new(on_change), on_remove: Box::new(on_remove) }
     }
 }
 
@@ -35,7 +37,8 @@ pub enum MSCEvent {
     ChangeCommand(String),
     ChangeImage(RgbaImage),
     ChangePoint,
-    ChangeAllowedDifference(u32)
+    ChangeAllowedDifference(u32),
+    Remove
 }
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroStepComponent<Message>
@@ -79,9 +82,13 @@ where
                     _ => unreachable!("MSCEvent::ChangeAllowedDifference dispatched when the inner value is {:?}", self.value)
                 }
             },
+
+            MSCEvent::Remove => {
+                return Some((self.on_remove)(self.my_index));
+            }
         }
 
-        Some((self.on_change)(self.value.clone(), self.step_index.clone()))
+        Some((self.on_change)(self.value.clone(), self.my_index))
     }
 
     fn view(&self, _state: &Self::State) -> Element<Self::Event, Renderer> {
@@ -168,9 +175,25 @@ where
             },
         }
 
-        res
-        .spacing(3)
-        .align_items(Alignment::Center)
+        container(
+            res
+            .push(
+                column().push(
+                    button(
+                        text(
+                            "x"
+                        )
+                    )
+                    .on_press(MSCEvent::Remove)
+                )
+                .height(Length::Fill)
+            )
+            .spacing(3)
+            .align_items(Alignment::Center)
+        )
+        .height(Length::Units(150))     //replace this wiht max_hight when it's fixed in 0.5
+        .style(BorderedContainer::Nothing)
+        .padding(8)
         .into()
     }
 }
@@ -190,8 +213,9 @@ where
 pub fn macro_step_component<Message>(
     step_index: usize,
     value: Option<MacroStep>,
-    on_change: impl Fn(MacroStep, usize) -> Message + 'static
+    on_change: impl Fn(MacroStep, usize) -> Message + 'static,
+    on_remove: impl Fn(usize) -> Message + 'static
 ) -> MacroStepComponent<Message> {
-    MacroStepComponent::new(step_index, value, on_change)
+    MacroStepComponent::new(step_index, value, on_change, on_remove)
 }
 

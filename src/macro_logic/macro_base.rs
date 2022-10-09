@@ -5,7 +5,7 @@ use image::RgbaImage;
 pub struct Macro {
     version: u64,
     settings: String,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
-    macro_steps: Vec<MacroStep>
+    pub macro_steps: Vec<MacroStep>
 }
 
 #[derive(Default, Clone, Debug)]
