@@ -1,4 +1,5 @@
 use iced::widget::svg::{Svg, Handle};
+use image::RgbaImage;
 
 #[derive(Default)]
 pub struct Macro {
@@ -24,16 +25,16 @@ pub enum ClickPoint {
 #[derive(Debug, Clone)]
 pub enum MacroStep {
     Launch(String),                         // has the command
-    ClickImage(String, ClickPoint, f32),    // image name, click point, allowed difference
-    AwaitImage(String, f32)                 // image name, allowed difference
+    ClickImage(Option<RgbaImage>, ClickPoint, f32),    // image name, click point, allowed difference
+    AwaitImage(Option<RgbaImage>, f32)                 // image name, allowed difference
 }
 
 impl MacroStep {
     pub fn dispatch(&self) {
         match self {
             MacroStep::Launch(command) => MacroStep::execute_launch(command),
-            MacroStep::ClickImage(img_name, point, allowed_diff) => MacroStep::execute_click_image(img_name, point, allowed_diff),
-            MacroStep::AwaitImage(img_name, allowed_diff) => MacroStep::execute_await_image(img_name, allowed_diff),
+            MacroStep::ClickImage(img_data, point, allowed_diff) => MacroStep::execute_click_image(img_data, point, allowed_diff),
+            MacroStep::AwaitImage(img_data, allowed_diff) => MacroStep::execute_await_image(img_data, allowed_diff),
         }
     }
 
@@ -42,11 +43,11 @@ impl MacroStep {
     }
 
     pub fn default_click_image() -> MacroStep {
-        MacroStep::ClickImage("".into(), Default::default(), 0.0)
+        MacroStep::ClickImage(None, Default::default(), 0.0)
     }
 
     pub fn default_await_image() -> MacroStep {
-        MacroStep::AwaitImage("".into(), 0.0)
+        MacroStep::AwaitImage(None, 0.0)
     }
 
     pub fn to_string(&self) -> String {
@@ -78,11 +79,11 @@ impl MacroStep {
         ()
     }
 
-    fn execute_click_image(img_name: &String, point: &ClickPoint, allowed_diff: &f32) {
+    fn execute_click_image(img_data: &Option<RgbaImage>, point: &ClickPoint, allowed_diff: &f32) {
         ()
     }
 
-    fn execute_await_image(img_name: &String, allowed_diff: &f32) {
+    fn execute_await_image(img_data: &Option<RgbaImage>, allowed_diff: &f32) {
         ()
     }
 }

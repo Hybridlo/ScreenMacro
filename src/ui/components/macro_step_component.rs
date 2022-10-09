@@ -2,11 +2,12 @@ use iced::{pure::{container, row, pick_list, text, button}, Length, Alignment};
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
+use image::RgbaImage;
 
 use crate::macro_logic::MacroStep;
 use crate::ui::style::TextButton;
 
-use super::{file_choose_component, percent_text_input};
+use super::{file_choose_component, percent_text_input, image_input_component};
 
 pub struct MacroStepComponent<Message> {
     step_index: usize,
@@ -32,14 +33,15 @@ impl<Message> MacroStepComponent<Message> {
 pub enum MSCEvent {
     ChangeStepType(String),
     ChangeCommand(String),
-    ChangeImage(String),
+    ChangeImage(RgbaImage),
     ChangePoint,
     ChangeAllowedDifference(u32)
 }
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroStepComponent<Message>
 where
-    Renderer: text::Renderer + 'static + iced_native::svg::Renderer,
+    Renderer: text::Renderer + 'static + iced_native::svg::Renderer + iced_native::image::Renderer,
+    <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
     type Event = MSCEvent;
     type State = ();
@@ -57,8 +59,8 @@ where
 
             MSCEvent::ChangeImage(new_image) => {
                 match &self.value {
-                    MacroStep::ClickImage(_, click_point, allowed_difference) => self.value = MacroStep::ClickImage(new_image, click_point.clone(), allowed_difference.clone()),
-                    MacroStep::AwaitImage(_, allowed_difference) => self.value = MacroStep::AwaitImage(new_image, allowed_difference.clone()),
+                    MacroStep::ClickImage(_, click_point, allowed_difference) => self.value = MacroStep::ClickImage(Some(new_image), click_point.clone(), allowed_difference.clone()),
+                    MacroStep::AwaitImage(_, allowed_difference) => self.value = MacroStep::AwaitImage(Some(new_image), allowed_difference.clone()),
                     _ => unreachable!("MSCEvent::ChangeImage dispatched when the inner value is {:?}", self.value)
                 }
             },
@@ -71,13 +73,11 @@ where
             },
 
             MSCEvent::ChangeAllowedDifference(new_allowed_diff) => {
-                println!("{}", new_allowed_diff);
                 match &self.value {
                     MacroStep::ClickImage(image, click_point, _) => self.value = MacroStep::ClickImage(image.clone(), click_point.clone(), ((100 - new_allowed_diff) as f32) / 100.0),
                     MacroStep::AwaitImage(image, _) => self.value = MacroStep::AwaitImage(image.clone(), ((100 - new_allowed_diff) as f32) / 100.0),
                     _ => unreachable!("MSCEvent::ChangeAllowedDifference dispatched when the inner value is {:?}", self.value)
                 }
-                println!("{:?}", self.value);
             },
         }
 
@@ -85,7 +85,6 @@ where
     }
 
     fn view(&self, _state: &Self::State) -> Element<Self::Event, Renderer> {
-
         let mut res = row();
 
         res = res.push(
@@ -111,10 +110,13 @@ where
                 )
             },
 
-            MacroStep::ClickImage(_, click_point, allowed_difference) => {
+            MacroStep::ClickImage(curr_image, click_point, allowed_difference) => {
                 res = res.push(
                     container(
-                        text("Here is the image chooser stuff")
+                        image_input_component(
+                            curr_image.clone(),
+                            MSCEvent::ChangeImage
+                        )
                     )
                     .width(Length::FillPortion(6))
                 )
@@ -141,10 +143,13 @@ where
                 )
             },
 
-            MacroStep::AwaitImage(_, allowed_difference) => {
+            MacroStep::AwaitImage(curr_image, allowed_difference) => {
                 res = res.push(
                     container(
-                        text("Here is the image chooser stuff")
+                        image_input_component(
+                            curr_image.clone(),
+                            MSCEvent::ChangeImage
+                        )
                     )
                     .width(Length::FillPortion(8))
                 )
@@ -174,7 +179,8 @@ impl<'a, Message, Renderer> From<MacroStepComponent<Message>>
     for Element<'a, Message, Renderer>
 where
     Message: 'a,
-    Renderer: 'static + text::Renderer + iced_native::svg::Renderer,
+    Renderer: 'static + text::Renderer + iced_native::svg::Renderer + iced_native::image::Renderer,
+    <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
     fn from(macro_step_component: MacroStepComponent<Message>) -> Self {
         pure::component(macro_step_component)
