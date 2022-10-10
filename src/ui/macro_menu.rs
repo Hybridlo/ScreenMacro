@@ -10,7 +10,8 @@ use super::style::{PlusButton, BorderedContainer};
 pub enum MacroMenuMessage {
     NewVal(MacroStep, usize),
     Removed(usize),
-    Add
+    Add,
+    EmitError(String),
 }
 
 pub struct MacroMenu {
@@ -26,7 +27,8 @@ impl MacroMenu {
         match msg {
             MacroMenuMessage::NewVal(val, index) => _ = self.macro_data.macro_steps.splice(index..index+1, [val]),
             MacroMenuMessage::Removed(index) => _ = self.macro_data.macro_steps.remove(index),
-            MacroMenuMessage::Add => self.macro_data.macro_steps.push(Default::default())
+            MacroMenuMessage::Add => self.macro_data.macro_steps.push(Default::default()),
+            MacroMenuMessage::EmitError(_) => ()
         }
     }
 
@@ -39,7 +41,8 @@ impl MacroMenu {
                     i,
                     Some(macro_step.clone()),
                     MacroMenuMessage::NewVal,
-                    MacroMenuMessage::Removed
+                    MacroMenuMessage::Removed,
+                    MacroMenuMessage::EmitError
                 )
             )
         }

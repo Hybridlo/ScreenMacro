@@ -10,12 +10,17 @@ use rfd::FileDialog;
 
 pub struct ImageInputComponent<Message> {
     image: Option<RgbaImage>,
-    on_change: Box<dyn Fn(RgbaImage) -> Message>
+    on_change: Box<dyn Fn(RgbaImage) -> Message>,
+    on_error: Box<dyn Fn(String) -> Message>
 }
 
 impl<Message> ImageInputComponent<Message> {
-    pub fn new(image: Option<RgbaImage>, on_change: impl Fn(RgbaImage) -> Message + 'static) -> Self {
-        ImageInputComponent { image, on_change: Box::new(on_change) }
+    pub fn new(
+        image: Option<RgbaImage>,
+        on_change: impl Fn(RgbaImage) -> Message + 'static,
+        on_error: impl Fn(String) -> Message + 'static
+    ) -> Self {
+        ImageInputComponent { image, on_change: Box::new(on_change), on_error: Box::new(on_error) }
     }
 }
 
@@ -38,15 +43,38 @@ where
         _state: &mut Self::State,
         event: Self::Event,
     ) -> Option<Message> {
+        // there might be a better way to handle errors
+        // but this works for now
+        
         match event {
             IICEvent::OpenImage => {
                 let img_path = FileDialog::new().add_filter("pngs", &["png"]).pick_file()?;
-                self.image = Some(Reader::open(img_path).ok()?.decode().ok()?.into_rgba8());
+
+                if let Ok(png_file) = Reader::open(img_path) {
+                    if let Ok(png_data) = png_file.decode() {
+                        self.image = Some(png_data.into_rgba8());
+                    } else {
+                        return Some((self.on_error)("Could not read the image".to_string()));
+                    }
+                } else {
+                    return Some((self.on_error)("Failed to open the file".to_string()));
+                }
             },
             IICEvent::PasteClipboard => {
-                let img_data = Clipboard::new().ok()?.get_image().ok()?;
-                let img_buffer = RgbaImage::from_raw(img_data.width as u32, img_data.height as u32, img_data.bytes.into())?;
-                self.image = Some(img_buffer);
+                if let Ok(mut clipboard) = Clipboard::new() {
+                    if let Ok(img_data) = clipboard.get_image() {
+                        if let Some(img_buffer) = RgbaImage::from_raw(img_data.width as u32, img_data.height as u32, img_data.bytes.into()) {
+                            self.image = Some(img_buffer);
+
+                        } else {
+                            return Some((self.on_error)("Image has unsupported format".to_string()))
+                        }
+                    } else {
+                        return Some((self.on_error)("Clipboard does not contain an image".to_string()))
+                    }
+                } else {
+                    return Some((self.on_error)("Failed to access the clipboard".to_string()))
+                }
             },
         }
 
@@ -126,7 +154,8 @@ where
 
 pub fn image_input_component<Message>(
     image: Option<RgbaImage>,
-    on_change: impl Fn(RgbaImage) -> Message + 'static
+    on_change: impl Fn(RgbaImage) -> Message + 'static,
+    on_error: impl Fn(String) -> Message + 'static
 ) -> ImageInputComponent<Message> {
-    ImageInputComponent::new(image, on_change)
+    ImageInputComponent::new(image, on_change, on_error)
 }

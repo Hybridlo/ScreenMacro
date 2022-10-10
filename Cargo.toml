@@ -13,3 +13,5 @@ iced_native = "0.5.1"
 rfd = "0.10.0"
 image = "0.24.4"
 arboard = "3.1.0"
+iced_aw = {version = "0.2.0", features = ["modal", "card"]}
+anyhow = "1.0.65"

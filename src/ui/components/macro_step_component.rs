@@ -1,4 +1,4 @@
-use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alignment, alignment::Vertical};
+use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alignment};
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
@@ -13,7 +13,8 @@ pub struct MacroStepComponent<Message> {
     my_index: usize,
     value: MacroStep,
     on_change: Box<dyn Fn(MacroStep, usize) -> Message>,
-    on_remove: Box<dyn Fn(usize) -> Message>
+    on_remove: Box<dyn Fn(usize) -> Message>,
+    on_error: Box<dyn Fn(String) -> Message>
 }
 
 impl<Message> MacroStepComponent<Message> {
@@ -21,13 +22,14 @@ impl<Message> MacroStepComponent<Message> {
         step_index: usize,
         value: Option<MacroStep>,
         on_change: impl Fn(MacroStep, usize) -> Message + 'static,
-        on_remove: impl Fn(usize) -> Message + 'static
+        on_remove: impl Fn(usize) -> Message + 'static,
+        on_error: impl Fn(String) -> Message + 'static
     ) -> Self {
         if let Some(value) = value {
-            return Self { my_index: step_index, value, on_change: Box::new(on_change), on_remove: Box::new(on_remove) };
+            return Self { my_index: step_index, value, on_change: Box::new(on_change), on_remove: Box::new(on_remove), on_error: Box::new(on_error) };
         }
 
-        Self { my_index: step_index, value: Default::default(), on_change: Box::new(on_change), on_remove: Box::new(on_remove) }
+        Self { my_index: step_index, value: Default::default(), on_change: Box::new(on_change), on_remove: Box::new(on_remove), on_error: Box::new(on_error) }
     }
 }
 
@@ -38,7 +40,8 @@ pub enum MSCEvent {
     ChangeImage(RgbaImage),
     ChangePoint,
     ChangeAllowedDifference(u32),
-    Remove
+    Remove,
+    EmitError(String),
 }
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroStepComponent<Message>
@@ -85,7 +88,9 @@ where
 
             MSCEvent::Remove => {
                 return Some((self.on_remove)(self.my_index));
-            }
+            },
+
+            MSCEvent::EmitError(error) => return Some((self.on_error)(error)),
         }
 
         Some((self.on_change)(self.value.clone(), self.my_index))
@@ -122,7 +127,8 @@ where
                     container(
                         image_input_component(
                             curr_image.clone(),
-                            MSCEvent::ChangeImage
+                            MSCEvent::ChangeImage,
+                            MSCEvent::EmitError
                         )
                     )
                     .width(Length::FillPortion(6))
@@ -155,7 +161,8 @@ where
                     container(
                         image_input_component(
                             curr_image.clone(),
-                            MSCEvent::ChangeImage
+                            MSCEvent::ChangeImage,
+                            MSCEvent::EmitError
                         )
                     )
                     .width(Length::FillPortion(8))
@@ -214,8 +221,9 @@ pub fn macro_step_component<Message>(
     step_index: usize,
     value: Option<MacroStep>,
     on_change: impl Fn(MacroStep, usize) -> Message + 'static,
-    on_remove: impl Fn(usize) -> Message + 'static
+    on_remove: impl Fn(usize) -> Message + 'static,
+    on_error: impl Fn(String) -> Message + 'static
 ) -> MacroStepComponent<Message> {
-    MacroStepComponent::new(step_index, value, on_change, on_remove)
+    MacroStepComponent::new(step_index, value, on_change, on_remove, on_error)
 }
 
