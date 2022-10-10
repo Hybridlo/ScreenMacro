@@ -28,7 +28,7 @@ impl MacroMenu {
             MacroMenuMessage::NewVal(val, index) => _ = self.macro_data.macro_steps.splice(index..index+1, [val]),
             MacroMenuMessage::Removed(index) => _ = self.macro_data.macro_steps.remove(index),
             MacroMenuMessage::Add => self.macro_data.macro_steps.push(Default::default()),
-            MacroMenuMessage::EmitError(_) => ()
+            MacroMenuMessage::EmitError(_) => ()    // caught by the root widget
         }
     }
 

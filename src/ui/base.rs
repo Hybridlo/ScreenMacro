@@ -2,25 +2,24 @@ use iced::{pure::{Sandbox, container, text, Element}, Length};
 use iced_aw::pure::{Card, Modal};
 use iced_pure::button;
 
-use super::{MainMenu, MainMenuMessage, MacroMenu, MacroMenuMessage};
+use super::{MacroMenu, MacroMenuMessage, components::main_menu};
 
 
 pub struct Base {
     selected: WindowShowing,
-    mainmenu: MainMenu,
     macromenu: MacroMenu,
     curr_error: Option<String>,
 }
 
 enum WindowShowing {
     Start,
-    MacroMenu
+    MacroMenu(String)
 }
 
 #[derive(Debug, Clone)]
 pub enum BaseMessage {
-    MainMenuMessage(MainMenuMessage),
     MacroMenuMessage(MacroMenuMessage),
+    NewMacro(String),
     DismissError
 }
 
@@ -30,7 +29,6 @@ impl Sandbox for Base {
     fn new() -> Self {
         Base {
             selected: WindowShowing::Start,
-            mainmenu: MainMenu::new(),
             macromenu: MacroMenu::new(),
             curr_error: Default::default()
         }
@@ -42,18 +40,18 @@ impl Sandbox for Base {
 
     fn update(&mut self, message: Self::Message) {
         match message {
-            BaseMessage::MainMenuMessage(_) => self.selected = WindowShowing::MacroMenu,
             BaseMessage::MacroMenuMessage(MacroMenuMessage::EmitError(error)) => self.curr_error = Some(error),
             BaseMessage::MacroMenuMessage(msg) => self.macromenu.update(msg),
             BaseMessage::DismissError => self.curr_error = None,
+            BaseMessage::NewMacro(name) => self.selected = WindowShowing::MacroMenu(name),
         }
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
         let content = container(
-            match self.selected {
-                WindowShowing::Start => self.mainmenu.view().map(BaseMessage::MainMenuMessage),
-                WindowShowing::MacroMenu => self.macromenu.view().map(BaseMessage::MacroMenuMessage),     // might have more later
+            match &self.selected {
+                WindowShowing::Start => main_menu(BaseMessage::NewMacro).into(),
+                WindowShowing::MacroMenu(name) => self.macromenu.view().map(BaseMessage::MacroMenuMessage),     // might have more later
             }
         )
         .height(Length::Fill)
