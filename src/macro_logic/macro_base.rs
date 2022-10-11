@@ -1,9 +1,12 @@
+use anyhow::Result;
 use iced::widget::svg::{Svg, Handle};
 use image::RgbaImage;
 
-#[derive(Default)]
+use std::process::Command;
+
+#[derive(Default, Clone, Debug)]
 pub struct Macro {
-    macro_name: String,
+    pub macro_name: String,
     version: u64,
     settings: String,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
     pub macro_steps: Vec<MacroStep>
@@ -37,11 +40,11 @@ pub enum MacroStep {
 }
 
 impl MacroStep {
-    pub fn dispatch(&self) {
+    pub fn dispatch(&self) -> Result<()> {
         match self {
             MacroStep::Launch(command) => MacroStep::execute_launch(command),
-            MacroStep::ClickImage(img_data, point, allowed_diff) => MacroStep::execute_click_image(img_data, point, allowed_diff),
-            MacroStep::AwaitImage(img_data, allowed_diff) => MacroStep::execute_await_image(img_data, allowed_diff),
+            MacroStep::ClickImage(img_data, point, allowed_diff) => Ok(MacroStep::execute_click_image(img_data, point, allowed_diff)),
+            MacroStep::AwaitImage(img_data, allowed_diff) => Ok(MacroStep::execute_await_image(img_data, allowed_diff)),
         }
     }
 
@@ -82,8 +85,8 @@ impl MacroStep {
         ]
     }
 
-    fn execute_launch(command: &String) {
-        ()
+    fn execute_launch(command: &String) -> Result<()> {
+        std::process::Command::new(command).spawn().map(|_| ()).map_err(|err| err.into())
     }
 
     fn execute_click_image(img_data: &Option<RgbaImage>, point: &ClickPoint, allowed_diff: &f32) {

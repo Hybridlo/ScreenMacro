@@ -129,6 +129,7 @@ where
                         &self.new_macro_name,
                         MMEvent::MacroNameUpdate
                     )
+                    .on_submit(MMEvent::NewMacroOk)
                 )
                 .foot(
                     container(

@@ -42,6 +42,7 @@ pub enum MSCEvent {
     ChangeAllowedDifference(u32),
     Remove,
     EmitError(String),
+    RunCurrentCommand
 }
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroStepComponent<Message>
@@ -91,6 +92,11 @@ where
             },
 
             MSCEvent::EmitError(error) => return Some((self.on_error)(error)),
+            MSCEvent::RunCurrentCommand => {
+                if let Err(err) = self.value.dispatch() {
+                    return Some((self.on_error)("An error occured while trying to execute the command:\n".to_string() + &err.to_string()))
+                }
+            },
         }
 
         Some((self.on_change)(self.value.clone(), self.my_index))
@@ -181,6 +187,15 @@ where
 
             },
         }
+
+        res = res.push(
+            button(
+                text(
+                    "play"      // TODO: make it an svg probably
+                )
+            )
+            .on_press(MSCEvent::RunCurrentCommand)
+        );
 
         container(
             res

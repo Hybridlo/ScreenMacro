@@ -10,16 +10,23 @@ use super::macro_step_component;
 pub struct MacroMenu<Message> {
     macro_data: Macro,
     on_go_back: Box<dyn Fn() -> Message>,
-    on_error: Box<dyn Fn(String) -> Message>
+    on_error: Box<dyn Fn(String) -> Message>,
+    on_update: Box<dyn Fn(Macro) -> Message>
 }
 
 impl<Message> MacroMenu<Message> {
     pub fn new(
         macro_name: String,
+        macro_data: Option<Macro>,
         on_go_back: impl Fn() -> Message + 'static,
-        on_error: impl Fn(String) -> Message + 'static
+        on_error: impl Fn(String) -> Message + 'static,
+        on_update: impl Fn(Macro) -> Message + 'static
     ) -> Self {
-        MacroMenu { macro_data: Macro::new(macro_name), on_go_back: Box::new(on_go_back), on_error: Box::new(on_error) }
+        if let Some(data) = macro_data {
+            return MacroMenu { macro_data: data, on_go_back: Box::new(on_go_back), on_error: Box::new(on_error), on_update: Box::new(on_update) };
+        }
+
+        MacroMenu { macro_data: Macro::new(macro_name), on_go_back: Box::new(on_go_back), on_error: Box::new(on_error), on_update: Box::new(on_update) }
     }
 }
 
@@ -51,11 +58,19 @@ where
             MMEvent::EmitError(error) => return Some((self.on_error)(error)),
         }
 
-        None
+        Some((self.on_update)(self.macro_data.clone()))
     }
 
     fn view(&self, _state: &Self::State) -> Element<Self::Event, Renderer> {
-        let mut macro_ui = column();
+        let mut macro_ui = column().push(
+            container(
+                text(
+                    self.macro_data.macro_name.clone()
+                )
+                .size(42)
+            )
+            .padding(5)
+        );
 
         for (i, macro_step) in self.macro_data.macro_steps.iter().enumerate() {
             macro_ui = macro_ui.push(
@@ -118,8 +133,10 @@ where
 
 pub fn macro_menu<Message>(
     macro_name: String,
+    macro_data: Option<Macro>,
     on_go_back: impl Fn() -> Message + 'static,
-    on_error: impl Fn(String) -> Message + 'static
+    on_error: impl Fn(String) -> Message + 'static,
+    on_update: impl Fn(Macro) -> Message + 'static
 ) -> MacroMenu<Message> {
-    MacroMenu::new(macro_name, on_go_back, on_error)
+    MacroMenu::new(macro_name, macro_data, on_go_back, on_error, on_update)
 }
