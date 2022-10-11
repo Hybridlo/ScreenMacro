@@ -2,12 +2,11 @@ use iced::{pure::{Sandbox, container, text, Element}, Length};
 use iced_aw::pure::{Card, Modal};
 use iced_pure::button;
 
-use super::{MacroMenu, MacroMenuMessage, components::main_menu};
+use super::components::{main_menu, macro_menu};
 
 
 pub struct Base {
     selected: WindowShowing,
-    macromenu: MacroMenu,
     curr_error: Option<String>,
 }
 
@@ -18,9 +17,10 @@ enum WindowShowing {
 
 #[derive(Debug, Clone)]
 pub enum BaseMessage {
-    MacroMenuMessage(MacroMenuMessage),
     NewMacro(String),
-    DismissError
+    DismissError,
+    ShowError(String),
+    ShowMainMenu
 }
 
 impl Sandbox for Base {
@@ -29,7 +29,6 @@ impl Sandbox for Base {
     fn new() -> Self {
         Base {
             selected: WindowShowing::Start,
-            macromenu: MacroMenu::new(),
             curr_error: Default::default()
         }
     }
@@ -40,20 +39,24 @@ impl Sandbox for Base {
 
     fn update(&mut self, message: Self::Message) {
         match message {
-            BaseMessage::MacroMenuMessage(MacroMenuMessage::EmitError(error)) => self.curr_error = Some(error),
-            BaseMessage::MacroMenuMessage(msg) => self.macromenu.update(msg),
             BaseMessage::DismissError => self.curr_error = None,
             BaseMessage::NewMacro(name) => self.selected = WindowShowing::MacroMenu(name),
+            BaseMessage::ShowError(error) => self.curr_error = Some(error),
+            BaseMessage::ShowMainMenu => self.selected = WindowShowing::Start,
         }
     }
 
     fn view(&self) -> Element<'_, Self::Message> {
-        let content = container(
-            match &self.selected {
-                WindowShowing::Start => main_menu(BaseMessage::NewMacro).into(),
-                WindowShowing::MacroMenu(name) => self.macromenu.view().map(BaseMessage::MacroMenuMessage),     // might have more later
-            }
-        )
+        let content = match &self.selected {
+            WindowShowing::Start => container(main_menu(BaseMessage::NewMacro)),
+            WindowShowing::MacroMenu(name) => container(
+                macro_menu(
+                    name.clone(), 
+                    || BaseMessage::ShowMainMenu,
+                    BaseMessage::ShowError
+                )
+            ),     // might have more later
+        }
         .height(Length::Fill)
         .width(Length::Fill)
         .center_x()

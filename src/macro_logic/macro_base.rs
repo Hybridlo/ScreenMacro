@@ -3,9 +3,16 @@ use image::RgbaImage;
 
 #[derive(Default)]
 pub struct Macro {
+    macro_name: String,
     version: u64,
     settings: String,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
     pub macro_steps: Vec<MacroStep>
+}
+
+impl Macro {
+    pub fn new(name: String) -> Self {
+        Macro { macro_name: name, ..Default::default() }
+    }
 }
 
 #[derive(Default, Clone, Debug)]
