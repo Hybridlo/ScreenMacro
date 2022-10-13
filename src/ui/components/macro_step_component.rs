@@ -2,7 +2,7 @@ use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alig
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
-use image::RgbaImage;
+use image::RgbImage;
 
 use crate::{macro_logic::MacroStep, ui::style::BorderedContainer};
 use crate::ui::style::TextButton;
@@ -37,7 +37,7 @@ impl<Message> MacroStepComponent<Message> {
 pub enum MSCEvent {
     ChangeStepType(String),
     ChangeCommand(String),
-    ChangeImage(RgbaImage),
+    ChangeImage(RgbImage),
     ChangePoint,
     ChangeAllowedDifference(u32),
     Remove,

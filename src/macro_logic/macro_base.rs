@@ -1,8 +1,9 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use iced::widget::svg::{Svg, Handle};
-use image::RgbaImage;
+use image::{RgbImage, DynamicImage, io::Reader};
+use autopilot::bitmap;
 
-use std::process::Command;
+use std::{process::Command, fs::File};
 
 #[derive(Default, Clone, Debug)]
 pub struct Macro {
@@ -35,17 +36,19 @@ pub enum ClickPoint {
 #[derive(Debug, Clone)]
 pub enum MacroStep {
     Launch(String),                         // has the command
-    ClickImage(Option<RgbaImage>, ClickPoint, f32),    // image name, click point, allowed difference
-    AwaitImage(Option<RgbaImage>, f32)                 // image name, allowed difference
+    ClickImage(Option<RgbImage>, ClickPoint, f32),    // image name, click point, allowed difference
+    AwaitImage(Option<RgbImage>, f32)                 // image name, allowed difference
 }
 
 impl MacroStep {
     pub fn dispatch(&self) -> Result<()> {
         match self {
-            MacroStep::Launch(command) => MacroStep::execute_launch(command),
-            MacroStep::ClickImage(img_data, point, allowed_diff) => Ok(MacroStep::execute_click_image(img_data, point, allowed_diff)),
-            MacroStep::AwaitImage(img_data, allowed_diff) => Ok(MacroStep::execute_await_image(img_data, allowed_diff)),
+            MacroStep::Launch(command) => MacroStep::execute_launch(command)?,
+            MacroStep::ClickImage(img_data, point, allowed_diff) => MacroStep::execute_click_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, point, allowed_diff)?,
+            MacroStep::AwaitImage(img_data, allowed_diff) => MacroStep::execute_await_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, allowed_diff)?,
         }
+
+        Ok(())
     }
 
     pub fn default_launch() -> MacroStep {
@@ -86,15 +89,28 @@ impl MacroStep {
     }
 
     fn execute_launch(command: &String) -> Result<()> {
-        std::process::Command::new(command).spawn().map(|_| ()).map_err(|err| err.into())
+        Command::new(command).spawn()?;
+
+        Ok(())
     }
 
-    fn execute_click_image(img_data: &Option<RgbaImage>, point: &ClickPoint, allowed_diff: &f32) {
-        ()
+    fn execute_click_image(img_data: &RgbImage, point: &ClickPoint, allowed_diff: &f32) -> Result<()> {
+        let target_img_bitmap = bitmap::Bitmap::new(DynamicImage::ImageRgb8(img_data.clone()), None);
+
+        loop {
+            let screen = bitmap::capture_screen()?;
+            
+            if let Some(found_point) = screen.find_bitmap(&target_img_bitmap, Some(*allowed_diff as f64), None, None) {
+                println!("{}", found_point);
+                break;
+            }
+        }
+
+        Ok(())
     }
 
-    fn execute_await_image(img_data: &Option<RgbaImage>, allowed_diff: &f32) {
-        ()
+    fn execute_await_image(img_data: &RgbImage, allowed_diff: &f32) -> Result<()> {
+        Ok(())
     }
 }
 

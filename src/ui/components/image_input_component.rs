@@ -3,21 +3,22 @@ use iced::pure::widget::image::Handle;
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native;
-use arboard::Clipboard;
-use image::RgbaImage;
+use clippers::{ClipperData, Clipboard};
+use image::RgbImage;
 use image::io::Reader;
+
 use rfd::FileDialog;
 
 pub struct ImageInputComponent<Message> {
-    image: Option<RgbaImage>,
-    on_change: Box<dyn Fn(RgbaImage) -> Message>,
+    image: Option<RgbImage>,
+    on_change: Box<dyn Fn(RgbImage) -> Message>,
     on_error: Box<dyn Fn(String) -> Message>
 }
 
 impl<Message> ImageInputComponent<Message> {
     pub fn new(
-        image: Option<RgbaImage>,
-        on_change: impl Fn(RgbaImage) -> Message + 'static,
+        image: Option<RgbImage>,
+        on_change: impl Fn(RgbImage) -> Message + 'static,
         on_error: impl Fn(String) -> Message + 'static
     ) -> Self {
         ImageInputComponent { image, on_change: Box::new(on_change), on_error: Box::new(on_error) }
@@ -52,7 +53,7 @@ where
 
                 if let Ok(png_file) = Reader::open(img_path) {
                     if let Ok(png_data) = png_file.decode() {
-                        self.image = Some(png_data.into_rgba8());
+                        self.image = Some(png_data.into_rgb());
                     } else {
                         return Some((self.on_error)("Could not read the image".to_string()));
                     }
@@ -61,19 +62,20 @@ where
                 }
             },
             IICEvent::PasteClipboard => {
-                if let Ok(mut clipboard) = Clipboard::new() {
-                    if let Ok(img_data) = clipboard.get_image() {
-                        if let Some(img_buffer) = RgbaImage::from_raw(img_data.width as u32, img_data.height as u32, img_data.bytes.into()) {
-                            self.image = Some(img_buffer);
+                if let Some(ClipperData::Image(img_data)) = Clipboard::get().read() {
+                    if let Some(img_buffer) = RgbImage::from_raw(   // there might be a better way to do this
+                        img_data.width() as u32, 
+                        img_data.height() as u32,
+                                                                        // remove the alpha channel
+                        img_data.pixels().flat_map(|pix| [pix[0], pix[1], pix[2]]).collect()
+                    ) {
+                        self.image = Some(img_buffer);
 
-                        } else {
-                            return Some((self.on_error)("Image has unsupported format".to_string()))
-                        }
                     } else {
-                        return Some((self.on_error)("Clipboard does not contain an image".to_string()))
+                        return Some((self.on_error)("Image has unsupported format".to_string()))
                     }
                 } else {
-                    return Some((self.on_error)("Failed to access the clipboard".to_string()))
+                    return Some((self.on_error)("Clipboard does not contain an image".to_string()))
                 }
             },
         }
@@ -94,7 +96,7 @@ where
             let handle = Handle::from_pixels(
                 img.width(),
                 img.height(),
-                img.pixels().flat_map(|p| [p.0[2], p.0[1], p.0[0], p.0[3]]).collect()
+                img.pixels().flat_map(|p| [p.0[2], p.0[1], p.0[0], 255]).collect()
             );
 
             res = res.push(
@@ -153,8 +155,8 @@ where
 }
 
 pub fn image_input_component<Message>(
-    image: Option<RgbaImage>,
-    on_change: impl Fn(RgbaImage) -> Message + 'static,
+    image: Option<RgbImage>,
+    on_change: impl Fn(RgbImage) -> Message + 'static,
     on_error: impl Fn(String) -> Message + 'static
 ) -> ImageInputComponent<Message> {
     ImageInputComponent::new(image, on_change, on_error)
