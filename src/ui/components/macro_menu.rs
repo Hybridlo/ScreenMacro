@@ -8,25 +8,18 @@ use crate::{macro_logic::{Macro, MacroStep}, ui::style::{PlusButton, BorderedCon
 use super::macro_step_component;
 
 pub struct MacroMenu<Message> {
-    macro_data: Macro,
+    macro_name: String,
     on_go_back: Box<dyn Fn() -> Message>,
-    on_error: Box<dyn Fn(String) -> Message>,
-    on_update: Box<dyn Fn(Macro) -> Message>
+    on_error: Box<dyn Fn(String) -> Message>
 }
 
 impl<Message> MacroMenu<Message> {
     pub fn new(
         macro_name: String,
-        macro_data: Option<Macro>,
         on_go_back: impl Fn() -> Message + 'static,
-        on_error: impl Fn(String) -> Message + 'static,
-        on_update: impl Fn(Macro) -> Message + 'static
+        on_error: impl Fn(String) -> Message + 'static
     ) -> Self {
-        if let Some(data) = macro_data {
-            return MacroMenu { macro_data: data, on_go_back: Box::new(on_go_back), on_error: Box::new(on_error), on_update: Box::new(on_update) };
-        }
-
-        MacroMenu { macro_data: Macro::new(macro_name), on_go_back: Box::new(on_go_back), on_error: Box::new(on_error), on_update: Box::new(on_update) }
+        MacroMenu { macro_name, on_go_back: Box::new(on_go_back), on_error: Box::new(on_error) }
     }
 }
 
@@ -43,36 +36,36 @@ where
     Renderer: text::Renderer + svg::Renderer + image::Renderer + 'static,
     <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
-    type State = ();
+    type State = Macro;
     type Event = MMEvent;
 
     fn update(
         &mut self,
-        _state: &mut Self::State,
+        state: &mut Self::State,
         event: Self::Event,
     ) -> Option<Message> {
         match event {
-            MMEvent::NewVal(val, index) => _ = self.macro_data.macro_steps.splice(index..index+1, [val]),
-            MMEvent::Removed(index) => _ = self.macro_data.macro_steps.remove(index),
-            MMEvent::Add => self.macro_data.macro_steps.push(Default::default()),
+            MMEvent::NewVal(val, index) => _ = state.macro_steps.splice(index..index+1, [val]),
+            MMEvent::Removed(index) => _ = state.macro_steps.remove(index),
+            MMEvent::Add => state.macro_steps.push(Default::default()),
             MMEvent::EmitError(error) => return Some((self.on_error)(error)),
         }
 
-        Some((self.on_update)(self.macro_data.clone()))
+        None
     }
 
-    fn view(&self, _state: &Self::State) -> Element<Self::Event, Renderer> {
+    fn view(&self, state: &Self::State) -> Element<Self::Event, Renderer> {
         let mut macro_ui = column().push(
             container(
                 text(
-                    self.macro_data.macro_name.clone()
+                    self.macro_name.clone()
                 )
                 .size(42)
             )
             .padding(5)
         );
 
-        for (i, macro_step) in self.macro_data.macro_steps.iter().enumerate() {
+        for (i, macro_step) in state.macro_steps.iter().enumerate() {
             macro_ui = macro_ui.push(
                 macro_step_component(
                     i,
@@ -133,10 +126,8 @@ where
 
 pub fn macro_menu<Message>(
     macro_name: String,
-    macro_data: Option<Macro>,
     on_go_back: impl Fn() -> Message + 'static,
-    on_error: impl Fn(String) -> Message + 'static,
-    on_update: impl Fn(Macro) -> Message + 'static
+    on_error: impl Fn(String) -> Message + 'static
 ) -> MacroMenu<Message> {
-    MacroMenu::new(macro_name, macro_data, on_go_back, on_error, on_update)
+    MacroMenu::new(macro_name, on_go_back, on_error)
 }

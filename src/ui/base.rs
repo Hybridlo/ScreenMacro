@@ -8,7 +8,6 @@ use super::components::{main_menu, macro_menu};
 
 
 pub struct Base {
-    macro_info: Option<Macro>,      // TODO: if there's ever a way to show errors without re-rendering macro_menu this shouldn't be needed
     selected: WindowShowing,
     curr_error: Option<String>,
 }
@@ -23,8 +22,7 @@ pub enum BaseMessage {
     NewMacro(String),
     DismissError,
     ShowError(String),
-    ShowMainMenu,
-    MacroInfoUpdate(Macro)
+    ShowMainMenu
 }
 
 impl Sandbox for Base {
@@ -32,7 +30,6 @@ impl Sandbox for Base {
 
     fn new() -> Self {
         Base {
-            macro_info: Default::default(),
             selected: WindowShowing::Start,
             curr_error: Default::default()
         }
@@ -48,7 +45,6 @@ impl Sandbox for Base {
             BaseMessage::NewMacro(name) => self.selected = WindowShowing::MacroMenu(name),
             BaseMessage::ShowError(error) => self.curr_error = Some(error),
             BaseMessage::ShowMainMenu => self.selected = WindowShowing::Start,
-            BaseMessage::MacroInfoUpdate(macro_info) => self.macro_info = Some(macro_info),
         }
     }
 
@@ -58,10 +54,8 @@ impl Sandbox for Base {
             WindowShowing::MacroMenu(name) => container(
                 macro_menu(
                     name.clone(),
-                    self.macro_info.clone(),
                     || BaseMessage::ShowMainMenu,
                     BaseMessage::ShowError,
-                    BaseMessage::MacroInfoUpdate
                 )
             ),     // might have more later
         }
@@ -69,8 +63,6 @@ impl Sandbox for Base {
         .width(Length::Fill)
         .center_x()
         .padding(10);
-
-        println!("{}", self.curr_error.is_some());
 
         return Modal::new(self.curr_error.is_some(), content, || {
             Card::new(text("Error!"), text(self.curr_error.clone().unwrap_or("".to_string())))   // weird solution, but unwrapping panics despite loading only on .is_some()

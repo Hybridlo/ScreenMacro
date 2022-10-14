@@ -1,21 +1,20 @@
 use anyhow::{Result, anyhow};
 use iced::widget::svg::{Svg, Handle};
-use image::{RgbImage, DynamicImage, io::Reader};
-use autopilot::bitmap;
+use image::{RgbImage, DynamicImage};
+use autopilot::{bitmap, mouse, geometry::Point};
 
-use std::{process::Command, fs::File};
+use std::{process::Command};
 
 #[derive(Default, Clone, Debug)]
 pub struct Macro {
-    pub macro_name: String,
     version: u64,
     settings: String,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
     pub macro_steps: Vec<MacroStep>
 }
 
 impl Macro {
-    pub fn new(name: String) -> Self {
-        Macro { macro_name: name, ..Default::default() }
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 
@@ -96,12 +95,13 @@ impl MacroStep {
 
     fn execute_click_image(img_data: &RgbImage, point: &ClickPoint, allowed_diff: &f32) -> Result<()> {
         let target_img_bitmap = bitmap::Bitmap::new(DynamicImage::ImageRgb8(img_data.clone()), None);
-
         loop {
             let screen = bitmap::capture_screen()?;
             
             if let Some(found_point) = screen.find_bitmap(&target_img_bitmap, Some(*allowed_diff as f64), None, None) {
-                println!("{}", found_point);
+                let (mult_x, mult_y) = point.to_mults();
+                mouse::move_to(Point::new(found_point.x + mult_x * (img_data.width() as f64), found_point.y + mult_y * (img_data.height() as f64)))?;
+                mouse::click(mouse::Button::Left, None);
                 break;
             }
         }
@@ -110,6 +110,15 @@ impl MacroStep {
     }
 
     fn execute_await_image(img_data: &RgbImage, allowed_diff: &f32) -> Result<()> {
+        let target_img_bitmap = bitmap::Bitmap::new(DynamicImage::ImageRgb8(img_data.clone()), None);
+        loop {
+            let screen = bitmap::capture_screen()?;
+            
+            if let Some(_) = screen.find_bitmap(&target_img_bitmap, Some(*allowed_diff as f64), None, None) {
+                break;
+            }
+        }
+
         Ok(())
     }
 }
@@ -176,6 +185,20 @@ impl ClickPoint {
             ClickPoint::BottomLeft => Self::CenterLeft,
             ClickPoint::BottomMiddle => Self::BottomLeft,
             ClickPoint::BottomRight => Self::BottomMiddle,
+        }
+    }
+
+    pub fn to_mults(&self) -> (f64, f64) {
+        match self {
+            ClickPoint::TopLeft => (0.0, 0.0),
+            ClickPoint::TopMiddle => (0.5, 0.0),
+            ClickPoint::TopRight => (1.0, 0.0),
+            ClickPoint::CenterLeft => (0.0, 0.5),
+            ClickPoint::CenterMiddle => (0.5, 0.5),
+            ClickPoint::CenterRight => (1.0, 0.5),
+            ClickPoint::BottomLeft => (0.0, 1.0),
+            ClickPoint::BottomMiddle => (0.5, 1.0),
+            ClickPoint::BottomRight => (1.0, 1.0),
         }
     }
 }
