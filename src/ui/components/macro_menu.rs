@@ -1,4 +1,4 @@
-use iced::{pure::{column, text, button, container, scrollable, row}, Length};
+use iced::{pure::{column, text, button, container, scrollable, row}, Length, alignment::Vertical, Alignment};
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::{text, svg, image};
@@ -28,7 +28,8 @@ pub enum MMEvent {
     NewVal(MacroStep, usize),
     Removed(usize),
     Add,
-    EmitError(String)
+    EmitError(String),
+    BackPressed
 }
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroMenu<Message>
@@ -49,6 +50,7 @@ where
             MMEvent::Removed(index) => _ = state.macro_steps.remove(index),
             MMEvent::Add => state.macro_steps.push(Default::default()),
             MMEvent::EmitError(error) => return Some((self.on_error)(error)),
+            MMEvent::BackPressed => return Some((self.on_go_back)()),
         }
 
         None
@@ -97,14 +99,32 @@ where
         .width(Length::FillPortion(6))
         .height(Length::Fill);
 
-
+        let side_panel = column().push(
+            container(
+                column()
+            )
+            .height(Length::Shrink)
+        ).push(
+            container(
+                column().push(
+                    button(
+                        text("Back")
+                    )
+                    .on_press(MMEvent::BackPressed)
+                )
+            )
+            .height(Length::Fill)
+            .align_y(Vertical::Bottom)
+        )
+        .width(Length::Fill)
+        .align_items(Alignment::Center);
 
         row()
         .push(
            macro_container 
         ).push(
             container(
-                text("lol")
+                side_panel
             )
             .width(Length::FillPortion(2))
         ).height(Length::Fill)
