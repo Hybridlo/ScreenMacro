@@ -3,20 +3,20 @@ use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
 
-pub struct PercentTextInput<Message> {
+pub struct TimeInput<Message> {
     size: u16,
     placeholder: String,
-    value: u32,
-    on_change: Box<dyn Fn(u32) -> Message>,
+    value: u64,
+    on_change: Box<dyn Fn(u64) -> Message>,
 }
 
-impl<Message> PercentTextInput<Message> {
+impl<Message> TimeInput<Message> {
     pub fn new(
         placeholder: String,
-        value: u32,
-        on_change: impl Fn(u32) -> Message + 'static
+        value: u64,
+        on_change: impl Fn(u64) -> Message + 'static
     ) -> Self {
-        PercentTextInput { size: 12, placeholder, value, on_change: Box::new(on_change) }
+        TimeInput { size: 12, placeholder, value, on_change: Box::new(on_change) }
     }
 
     pub fn size(self, size: u16) -> Self {
@@ -28,16 +28,16 @@ impl<Message> PercentTextInput<Message> {
 }
 
 #[derive(Debug, Clone)]
-pub enum FTIEvent {
+pub enum TIEvent {
     InputChanged(String)
 }
 
-impl<Message, Renderer> Component<Message, Renderer> for PercentTextInput<Message>
+impl<Message, Renderer> Component<Message, Renderer> for TimeInput<Message>
 where
     Renderer: text::Renderer + 'static
 {
     type State = ();
-    type Event = FTIEvent;
+    type Event = TIEvent;
 
     fn update(
         &mut self,
@@ -45,16 +45,12 @@ where
         event: Self::Event,
     ) -> Option<Message> {
         match event {
-            FTIEvent::InputChanged(text) => {
+            TIEvent::InputChanged(text) => {
                 if text == "" {
                     return Some((self.on_change)(0));
                 }
                 
-                let num_res = text.parse::<u32>().ok()?;
-                
-                if num_res > 100 {
-                    return None;
-                }
+                let num_res = text.parse::<u64>().ok()?;
 
                 Some((self.on_change)(num_res))
             },
@@ -66,31 +62,31 @@ where
             text_input(
                 &self.placeholder,
                 &format!("{}", self.value),
-                FTIEvent::InputChanged
+                TIEvent::InputChanged
             )
             .size(self.size)
         ).push(
-            text("%").size(self.size)
+            text("ms").size(self.size)
         )
         .into()
     }
 }
 
-impl<'a, Message, Renderer> From<PercentTextInput<Message>>
+impl<'a, Message, Renderer> From<TimeInput<Message>>
     for Element<'a, Message, Renderer>
 where
     Message: 'a,
     Renderer: text::Renderer + 'static
 {
-    fn from(percent_text_input: PercentTextInput<Message>) -> Self {
+    fn from(percent_text_input: TimeInput<Message>) -> Self {
         pure::component(percent_text_input)
     }
 }
 
-pub fn percent_text_input<Message>(
+pub fn time_input<Message>(
     placeholder: String,
-    value: u32,
-    on_change: impl Fn(u32) -> Message + 'static
-) -> PercentTextInput<Message> {
-    PercentTextInput::new(placeholder, value, on_change) 
+    value: u64,
+    on_change: impl Fn(u64) -> Message + 'static
+) -> TimeInput<Message> {
+    TimeInput::new(placeholder, value, on_change) 
 }

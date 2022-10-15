@@ -2,8 +2,6 @@ use iced::{pure::{Sandbox, container, text, Element}, Length};
 use iced_aw::pure::{Card, Modal};
 use iced_pure::button;
 
-use crate::macro_logic::Macro;
-
 use super::components::{main_menu, macro_menu};
 
 

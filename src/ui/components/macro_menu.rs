@@ -1,4 +1,4 @@
-use iced::{pure::{column, text, button, container, scrollable, row}, Length, alignment::Vertical, Alignment};
+use iced::{pure::{column, text, button, container, scrollable, row}, Length, alignment::Vertical, Alignment, Font};
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::{text, svg, image};
@@ -34,7 +34,7 @@ pub enum MMEvent {
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroMenu<Message>
 where
-    Renderer: text::Renderer + svg::Renderer + image::Renderer + 'static,
+    Renderer: text::Renderer<Font = Font> + svg::Renderer + image::Renderer + 'static,
     <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
     type State = Macro;
@@ -136,7 +136,7 @@ impl<'a, Message, Renderer> From<MacroMenu<Message>>
     for Element<'a, Message, Renderer>
 where
     Message: 'a,
-    Renderer: text::Renderer + svg::Renderer + image::Renderer + 'static,
+    Renderer: text::Renderer<Font = Font> + svg::Renderer + image::Renderer + 'static,
     <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
     fn from(macro_menu: MacroMenu<Message>) -> Self {

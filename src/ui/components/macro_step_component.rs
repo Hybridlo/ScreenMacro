@@ -1,5 +1,5 @@
-use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alignment};
-use iced_pure::Element;
+use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alignment, Font};
+use iced_pure::{Element, text_input};
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
 use image::RgbImage;
@@ -7,7 +7,7 @@ use image::RgbImage;
 use crate::{macro_logic::MacroStep, ui::style::BorderedContainer};
 use crate::ui::style::TextButton;
 
-use super::{file_choose_component, percent_text_input, image_input_component};
+use super::{file_choose_component, percent_text_input, image_input_component, time_input};
 
 pub struct MacroStepComponent<Message> {
     my_index: usize,
@@ -40,6 +40,8 @@ pub enum MSCEvent {
     ChangeImage(RgbImage),
     ChangePoint,
     ChangeAllowedDifference(u32),
+    ChangeTextType(String),
+    ChangeWaitTime(u64),
     Remove,
     EmitError(String),
     RunCurrentCommand
@@ -47,7 +49,7 @@ pub enum MSCEvent {
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroStepComponent<Message>
 where
-    Renderer: text::Renderer + 'static + iced_native::svg::Renderer + iced_native::image::Renderer,
+    Renderer: text::Renderer<Font = Font> + 'static + iced_native::svg::Renderer + iced_native::image::Renderer,
     <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
     type Event = MSCEvent;
@@ -84,6 +86,19 @@ where
                     MacroStep::ClickImage(image, click_point, _) => self.value = MacroStep::ClickImage(image.clone(), click_point.clone(), ((100 - new_allowed_diff) as f32) / 100.0),
                     MacroStep::AwaitImage(image, _) => self.value = MacroStep::AwaitImage(image.clone(), ((100 - new_allowed_diff) as f32) / 100.0),
                     _ => unreachable!("MSCEvent::ChangeAllowedDifference dispatched when the inner value is {:?}", self.value)
+                }
+            },
+            
+            MSCEvent::ChangeTextType(text) => {
+                match &self.value {
+                    MacroStep::TypeText(_) => self.value = MacroStep::TypeText(text),
+                    _ => unreachable!("MSCEvent::ChangeTextType dispatched when the inner value is {:?}", self.value)
+                }
+            },
+            MSCEvent::ChangeWaitTime(time) => {
+                match &self.value {
+                    MacroStep::WaitTime(_) => self.value = MacroStep::WaitTime(time),
+                    _ => unreachable!("MSCEvent::ChangeWaitTime dispatched when the inner value is {:?}", self.value)
                 }
             },
 
@@ -153,7 +168,7 @@ where
                     container(
                         percent_text_input(
                             "0.0".into(), 
-                            format!("{}", ((1.0 - allowed_difference) * 100.0).round() as u32), 
+                            ((1.0 - allowed_difference) * 100.0).round() as u32, 
                             MSCEvent::ChangeAllowedDifference
                         )
                         .size(30)
@@ -176,8 +191,8 @@ where
                 .push(
                     container(
                         percent_text_input(
-                            "0.0".into(), 
-                            format!("{}", ((1.0 - allowed_difference) * 100.0).round() as u32), 
+                            "0".into(), 
+                            ((1.0 - allowed_difference) * 100.0).round() as u32, 
                             MSCEvent::ChangeAllowedDifference
                         )
                         .size(30)
@@ -185,6 +200,27 @@ where
                     .width(Length::Units(70))
                 )
 
+            },
+
+            MacroStep::TypeText(text) => {
+                res = res.push(
+                    text_input(
+                        "Text to type", 
+                        text,
+                        MSCEvent::ChangeTextType
+                    )
+                    .size(30)
+                )
+            },
+
+            MacroStep::WaitTime(time) => {
+                res = res.push(
+                    time_input(
+                        "Time to wait in milliseconds".to_string(),
+                        *time,
+                        MSCEvent::ChangeWaitTime
+                    )
+                )
             },
         }
 
@@ -224,7 +260,7 @@ impl<'a, Message, Renderer> From<MacroStepComponent<Message>>
     for Element<'a, Message, Renderer>
 where
     Message: 'a,
-    Renderer: 'static + text::Renderer + iced_native::svg::Renderer + iced_native::image::Renderer,
+    Renderer: 'static + text::Renderer<Font = Font> + iced_native::svg::Renderer + iced_native::image::Renderer,
     <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
     fn from(macro_step_component: MacroStepComponent<Message>) -> Self {

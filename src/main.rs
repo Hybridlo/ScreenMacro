@@ -1,10 +1,13 @@
 mod ui;
 mod macro_logic;
 
+use anyhow::Result;
 use ui::Base;
 use iced::{Settings, pure::Sandbox};
 
 
-fn main() {
-    Base::run(Settings::default());
+fn main() -> Result<()> {
+    Base::run(Settings::default())?;
+
+    Ok(())
 }
