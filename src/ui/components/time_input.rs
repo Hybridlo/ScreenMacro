@@ -16,7 +16,7 @@ impl<Message> TimeInput<Message> {
         value: u64,
         on_change: impl Fn(u64) -> Message + 'static
     ) -> Self {
-        TimeInput { size: 12, placeholder, value, on_change: Box::new(on_change) }
+        TimeInput { size: 24, placeholder, value, on_change: Box::new(on_change) }
     }
 
     pub fn size(self, size: u16) -> Self {

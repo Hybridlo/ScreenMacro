@@ -204,22 +204,34 @@ where
 
             MacroStep::TypeText(text) => {
                 res = res.push(
-                    text_input(
-                        "Text to type", 
-                        text,
-                        MSCEvent::ChangeTextType
+                    container(
+                        text_input(
+                            "Text to type", 
+                            text,
+                            MSCEvent::ChangeTextType
+                        )
+                        .size(30)
                     )
-                    .size(30)
+                    .width(Length::FillPortion(10))
                 )
             },
 
             MacroStep::WaitTime(time) => {
                 res = res.push(
-                    time_input(
-                        "Time to wait in milliseconds".to_string(),
-                        *time,
-                        MSCEvent::ChangeWaitTime
+                    container(
+                        time_input(
+                            "Time to wait in milliseconds".to_string(),
+                            *time,
+                            MSCEvent::ChangeWaitTime
+                        )
+                        .size(30)
                     )
+                    .width(Length::FillPortion(8))
+                ).push(
+                    container(
+                        text("")
+                    )
+                    .width(Length::FillPortion(2))
                 )
             },
         }

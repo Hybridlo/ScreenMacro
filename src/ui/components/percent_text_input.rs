@@ -16,7 +16,7 @@ impl<Message> PercentTextInput<Message> {
         value: u32,
         on_change: impl Fn(u32) -> Message + 'static
     ) -> Self {
-        PercentTextInput { size: 12, placeholder, value, on_change: Box::new(on_change) }
+        PercentTextInput { size: 24, placeholder, value, on_change: Box::new(on_change) }
     }
 
     pub fn size(self, size: u16) -> Self {

@@ -9,6 +9,7 @@ use std::time::Duration;
 
 #[derive(Default, Clone, Debug)]
 pub struct Macro {
+    pub macro_name: String,
     version: u64,
     settings: String,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
     pub macro_steps: Vec<MacroStep>
@@ -17,6 +18,14 @@ pub struct Macro {
 impl Macro {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    pub fn execute_macro(&self) -> Result<()> {
+        for step in self.macro_steps.iter() {
+            step.dispatch()?
+        }
+        
+        Ok(())
     }
 }
 

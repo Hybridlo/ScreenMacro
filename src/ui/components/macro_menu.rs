@@ -8,18 +8,20 @@ use crate::{macro_logic::{Macro, MacroStep}, ui::style::{PlusButton, BorderedCon
 use super::macro_step_component;
 
 pub struct MacroMenu<Message> {
-    macro_name: String,
+    macro_data: Macro,
     on_go_back: Box<dyn Fn() -> Message>,
-    on_error: Box<dyn Fn(String) -> Message>
+    on_error: Box<dyn Fn(String) -> Message>,
+    on_change: Box<dyn Fn(Macro) -> Message>
 }
 
 impl<Message> MacroMenu<Message> {
     pub fn new(
-        macro_name: String,
+        macro_data: Macro,
         on_go_back: impl Fn() -> Message + 'static,
-        on_error: impl Fn(String) -> Message + 'static
+        on_error: impl Fn(String) -> Message + 'static,
+        on_change: impl Fn(Macro) -> Message + 'static
     ) -> Self {
-        MacroMenu { macro_name, on_go_back: Box::new(on_go_back), on_error: Box::new(on_error) }
+        MacroMenu { macro_data, on_go_back: Box::new(on_go_back), on_error: Box::new(on_error), on_change: Box::new(on_change) }
     }
 }
 
@@ -29,7 +31,8 @@ pub enum MMEvent {
     Removed(usize),
     Add,
     EmitError(String),
-    BackPressed
+    BackPressed,
+    PlayPressed
 }
 
 impl<Message, Renderer> Component<Message, Renderer> for MacroMenu<Message>
@@ -37,37 +40,54 @@ where
     Renderer: text::Renderer<Font = Font> + svg::Renderer + image::Renderer + 'static,
     <Renderer as iced_native::image::Renderer>::Handle: From<iced::image::Handle>
 {
-    type State = Macro;
+    type State = ();
     type Event = MMEvent;
 
     fn update(
         &mut self,
-        state: &mut Self::State,
+        _state: &mut Self::State,
         event: Self::Event,
     ) -> Option<Message> {
         match event {
-            MMEvent::NewVal(val, index) => _ = state.macro_steps.splice(index..index+1, [val]),
-            MMEvent::Removed(index) => _ = state.macro_steps.remove(index),
-            MMEvent::Add => state.macro_steps.push(Default::default()),
+            MMEvent::NewVal(val, index) => {
+                self.macro_data.macro_steps.splice(index..index+1, [val]);
+                return Some((self.on_change)(self.macro_data.clone()))
+            },
+
+            MMEvent::Removed(index) => {
+                self.macro_data.macro_steps.remove(index);
+                return Some((self.on_change)(self.macro_data.clone()))
+            },
+
+            MMEvent::Add => {
+                self.macro_data.macro_steps.push(Default::default());
+                return Some((self.on_change)(self.macro_data.clone()))
+            },
+            
             MMEvent::EmitError(error) => return Some((self.on_error)(error)),
             MMEvent::BackPressed => return Some((self.on_go_back)()),
+            MMEvent::PlayPressed => {
+                if let Err(error) = self.macro_data.execute_macro() {
+                    return Some((self.on_error)(error.to_string()));
+                }
+            },
         }
 
         None
     }
 
-    fn view(&self, state: &Self::State) -> Element<Self::Event, Renderer> {
+    fn view(&self, _state: &Self::State) -> Element<Self::Event, Renderer> {
         let mut macro_ui = column().push(
             container(
                 text(
-                    self.macro_name.clone()
+                    self.macro_data.macro_name.clone()
                 )
                 .size(42)
             )
             .padding(5)
         );
 
-        for (i, macro_step) in state.macro_steps.iter().enumerate() {
+        for (i, macro_step) in self.macro_data.macro_steps.iter().enumerate() {
             macro_ui = macro_ui.push(
                 macro_step_component(
                     i,
@@ -101,7 +121,12 @@ where
 
         let side_panel = column().push(
             container(
-                column()
+                column().push(
+                    button(
+                        text("play")
+                    )
+                    .on_press(MMEvent::PlayPressed)
+                )
             )
             .height(Length::Shrink)
         ).push(
@@ -145,9 +170,10 @@ where
 }
 
 pub fn macro_menu<Message>(
-    macro_name: String,
+    macro_data: Macro,
     on_go_back: impl Fn() -> Message + 'static,
-    on_error: impl Fn(String) -> Message + 'static
+    on_error: impl Fn(String) -> Message + 'static,
+    on_change: impl Fn(Macro) -> Message + 'static
 ) -> MacroMenu<Message> {
-    MacroMenu::new(macro_name, on_go_back, on_error)
+    MacroMenu::new(macro_data, on_go_back, on_error, on_change)
 }
