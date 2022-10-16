@@ -1,4 +1,5 @@
 use anyhow::{Result, anyhow};
+use autopilot::key::Flag;
 use iced::widget::svg::{Svg, Handle};
 use image::{RgbImage, DynamicImage};
 use autopilot::{bitmap, mouse, geometry::Point, key};
@@ -48,7 +49,8 @@ pub enum MacroStep {
     Launch(String),                         // has the command
     ClickImage(Option<RgbImage>, ClickPoint, f32),    // image name, click point, allowed difference
     AwaitImage(Option<RgbImage>, f32),                // image name, allowed difference
-    TypeText(String),
+    TypeText(String, Vec<Flag>),
+    PressKey(key::KeyCode, Vec<Flag>),
     WaitTime(u64)
 }
 
@@ -58,7 +60,8 @@ impl MacroStep {
             MacroStep::Launch(command) => MacroStep::execute_launch(command)?,
             MacroStep::ClickImage(img_data, point, allowed_diff) => MacroStep::execute_click_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, point, allowed_diff)?,
             MacroStep::AwaitImage(img_data, allowed_diff) => MacroStep::execute_await_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, allowed_diff)?,
-            MacroStep::TypeText(text) => MacroStep::execute_type_text(text)?,
+            MacroStep::TypeText(text, flags) => MacroStep::execute_type_text(text, flags)?,
+            MacroStep::PressKey(key, flags) => MacroStep::execute_press_key(key, flags)?,
             MacroStep::WaitTime(milliseconds) => MacroStep::execute_wait(*milliseconds)?,
         }
 
@@ -78,42 +81,15 @@ impl MacroStep {
     }
 
     pub fn default_type_text() -> MacroStep {
-        MacroStep::TypeText("".to_string())
+        MacroStep::TypeText("".to_string(), vec![])
+    }
+
+    pub fn default_press_key() -> MacroStep {
+        MacroStep::PressKey(key::KeyCode::LeftArrow, vec![])
     }
 
     pub fn default_wait() -> MacroStep {
         MacroStep::WaitTime(0)
-    }
-
-    pub fn to_string(&self) -> String {
-        match self {
-            MacroStep::Launch(_) => "Launch program",
-            MacroStep::ClickImage(_, _, _) => "Click an image",
-            MacroStep::AwaitImage(_, _) => "Wait for image",
-            MacroStep::TypeText(_) => "Type text",
-            MacroStep::WaitTime(_) => "Wait",
-        }.into()
-    }
-
-    pub fn from_string(input: &str) -> Self {
-        match input {
-            "Launch program" => MacroStep::default_launch(),
-            "Click an image" => MacroStep::default_click_image(),
-            "Wait for image" => MacroStep::default_await_image(),
-            "Type text" => MacroStep::default_type_text(),
-            "Wait" => MacroStep::default_wait(),
-            _ => unreachable!()
-        }
-    }
-
-    pub fn all_string_options() -> Vec<String> {
-        vec![
-            "Launch program".into(),
-            "Click an image".into(),
-            "Wait for image".into(),
-            "Type text".into(),
-            "Wait".into()
-        ]
     }
 
     fn execute_launch(command: &str) -> Result<()> {
@@ -151,8 +127,14 @@ impl MacroStep {
         Ok(())
     }
 
-    fn execute_type_text(text: &str) -> Result<()> {
-        key::type_string(text, &[], 0.0, 0.0);
+    fn execute_type_text(text: &str, flags: &Vec<Flag>) -> Result<()> {
+        key::type_string(text, &flags[..], 0.0, 0.0);
+
+        Ok(())
+    }
+
+    fn execute_press_key(key: &key::KeyCode, flags: &Vec<Flag>) -> Result<()> {
+        key::tap(&key::Code(*key), &flags[..], 0, 0);
 
         Ok(())
     }

@@ -1,13 +1,14 @@
+use autopilot::key::{Flag, KeyCode};
 use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alignment, Font};
 use iced_pure::{Element, text_input};
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
 use image::RgbImage;
 
-use crate::{macro_logic::MacroStep, ui::style::BorderedContainer};
+use crate::{macro_logic::{MacroStep, EnumInterString}, ui::style::BorderedContainer};
 use crate::ui::style::TextButton;
 
-use super::{file_choose_component, percent_text_input, image_input_component, time_input};
+use super::{file_choose_component, percent_text_input, image_input_component, time_input, modifiers_chooser_component};
 
 pub struct MacroStepComponent<Message> {
     my_index: usize,
@@ -41,6 +42,8 @@ pub enum MSCEvent {
     ChangePoint,
     ChangeAllowedDifference(u32),
     ChangeTextType(String),
+    ChangeKey(String),
+    ChangeModifiers(Vec<Flag>),
     ChangeWaitTime(u64),
     Remove,
     EmitError(String),
@@ -57,7 +60,12 @@ where
 
     fn update(&mut self, _state: &mut Self::State, event: Self::Event) -> Option<Message> {
         match event {
-            MSCEvent::ChangeStepType(new_type) => self.value = MacroStep::from_string(&new_type),
+            MSCEvent::ChangeStepType(new_type) => {
+                match MacroStep::from_str(&new_type) {
+                    Ok(step) => self.value = step,
+                    Err(err) => return Some((self.on_error)(err.to_string())),
+                } 
+            },
 
             MSCEvent::ChangeCommand(new_command) => {
                 match &self.value {
@@ -91,16 +99,38 @@ where
             
             MSCEvent::ChangeTextType(text) => {
                 match &self.value {
-                    MacroStep::TypeText(_) => self.value = MacroStep::TypeText(text),
+                    MacroStep::TypeText(_, flags) => self.value = MacroStep::TypeText(text, flags.to_vec()),
                     _ => unreachable!("MSCEvent::ChangeTextType dispatched when the inner value is {:?}", self.value)
                 }
             },
+
+            MSCEvent::ChangeKey(key) => {
+                match &self.value {
+                    MacroStep::PressKey(_, flags) => {
+                        match KeyCode::from_str(&key) {
+                            Ok(key) => self.value = MacroStep::PressKey(key, flags.clone()),
+                            Err(err) => return Some((self.on_error)(err.to_string())),
+                        }
+                    },
+                    _ => unreachable!("MSCEvent::ChangeKey dispatched when the inner value is {:?}", self.value)
+                }
+            }
+
+            MSCEvent::ChangeModifiers(modifiers) => {
+                match &self.value {
+                    MacroStep::TypeText(text, _) => self.value = MacroStep::TypeText(text.clone(), modifiers),
+                    MacroStep::PressKey(key, _) => self.value = MacroStep::PressKey(key.clone(), modifiers),
+                    _ => unreachable!("MSCEvent::ChangeModifiers dispatched when the inner value is {:?}", self.value)
+                }
+            },
+
             MSCEvent::ChangeWaitTime(time) => {
                 match &self.value {
                     MacroStep::WaitTime(_) => self.value = MacroStep::WaitTime(time),
                     _ => unreachable!("MSCEvent::ChangeWaitTime dispatched when the inner value is {:?}", self.value)
                 }
             },
+
 
             MSCEvent::Remove => {
                 return Some((self.on_remove)(self.my_index));
@@ -202,7 +232,7 @@ where
 
             },
 
-            MacroStep::TypeText(text) => {
+            MacroStep::TypeText(text, flags) => {
                 res = res.push(
                     container(
                         text_input(
@@ -212,9 +242,32 @@ where
                         )
                         .size(30)
                     )
-                    .width(Length::FillPortion(10))
+                    .width(Length::FillPortion(8))
+                ).push(
+                    container(
+                        modifiers_chooser_component(flags.to_vec(), MSCEvent::ChangeModifiers)
+                    )
+                    .width(Length::Shrink)
                 )
             },
+
+            MacroStep::PressKey(key, flags) => {
+                res = res.push(
+                    container(
+                        pick_list(
+                            KeyCode::all_string_options(),
+                            Some(key.to_string()),
+                            MSCEvent::ChangeKey
+                        )
+                    )
+                    .width(Length::FillPortion(8))
+                ).push(
+                    container(
+                        modifiers_chooser_component(flags.to_vec(), MSCEvent::ChangeModifiers)
+                    )
+                    .width(Length::Shrink)
+                )
+            }
 
             MacroStep::WaitTime(time) => {
                 res = res.push(
