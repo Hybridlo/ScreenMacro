@@ -52,7 +52,7 @@ where
                 
                 let num_res = text.parse::<u32>().ok()?;
                 
-                if num_res > 100 {
+                if num_res > 100 {      // this is the only reason for a seperate component, maybe i could have it in my_numeric_input, but not yet
                     return None;
                 }
 

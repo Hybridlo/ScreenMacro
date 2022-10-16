@@ -1,4 +1,4 @@
-use autopilot::key::{Flag, KeyCode};
+use autopilot::{key::{Flag, KeyCode}, mouse::ScrollDirection};
 use iced::{pure::{container, row, pick_list, text, button, column}, Length, Alignment, Font};
 use iced_pure::{Element, text_input};
 use iced_lazy::pure::{self, Component};
@@ -8,7 +8,7 @@ use image::RgbImage;
 use crate::{macro_logic::{MacroStep, EnumInterString}, ui::style::BorderedContainer};
 use crate::ui::style::TextButton;
 
-use super::{file_choose_component, percent_text_input, image_input_component, time_input, modifiers_chooser_component};
+use super::{file_choose_component, percent_text_input, image_input_component, my_numeric_input, modifiers_chooser_component};
 
 pub struct MacroStepComponent<Message> {
     my_index: usize,
@@ -45,6 +45,8 @@ pub enum MSCEvent {
     ChangeKey(String),
     ChangeModifiers(Vec<Flag>),
     ChangeWaitTime(u64),
+    ChangeScrollAmount(u32),
+    ChangeScrollDirection(String),
     Remove,
     EmitError(String),
     RunCurrentCommand
@@ -123,6 +125,25 @@ where
                     _ => unreachable!("MSCEvent::ChangeModifiers dispatched when the inner value is {:?}", self.value)
                 }
             },
+
+            MSCEvent::ChangeScrollAmount(amount) => {
+                match &self.value {
+                    MacroStep::Scroll(direction, _) => self.value = MacroStep::Scroll(direction.clone(), amount),
+                    _ => unreachable!("MSCEvent::ChangeScrollAmount dispatched when the inner value is {:?}", self.value)
+                }
+            },
+
+            MSCEvent::ChangeScrollDirection(direction) => {
+                match &self.value {
+                    MacroStep::Scroll(_, amount) => {
+                        match ScrollDirection::from_str(&direction) {
+                            Ok(direction) => self.value = MacroStep::Scroll(direction, amount.clone()),
+                            Err(err) => return Some((self.on_error)(err.to_string())),
+                        }
+                    },
+                    _ => unreachable!("MSCEvent::ChangeScrollDirection dispatched when the inner value is {:?}", self.value)
+                }
+            }
 
             MSCEvent::ChangeWaitTime(time) => {
                 match &self.value {
@@ -267,13 +288,38 @@ where
                     )
                     .width(Length::Shrink)
                 )
-            }
+            },
+
+            MacroStep::Scroll(direction, amount) => {
+                res = res.push(
+                    container(
+                        pick_list(
+                            ScrollDirection::all_string_options(),
+                            Some(direction.to_string()),
+                            MSCEvent::ChangeScrollDirection
+                        )
+                    )
+                    .width(Length::FillPortion(5))
+                ).push(
+                    container(
+                        my_numeric_input(
+                            "Amount to scroll".to_string(),
+                            "scroll ticks".to_string(),
+                            *amount, 
+                            MSCEvent::ChangeScrollAmount
+                        )
+                        .size(30)
+                    )
+                    .width(Length::FillPortion(5))
+                )
+            },
 
             MacroStep::WaitTime(time) => {
                 res = res.push(
                     container(
-                        time_input(
+                        my_numeric_input(
                             "Time to wait in milliseconds".to_string(),
+                            "ms".to_string(),
                             *time,
                             MSCEvent::ChangeWaitTime
                         )

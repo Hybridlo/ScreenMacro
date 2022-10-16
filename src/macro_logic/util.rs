@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow};
-use autopilot::key::KeyCode;
+use autopilot::{key::KeyCode, mouse::ScrollDirection};
 
 use super::MacroStep;
 
@@ -24,6 +24,7 @@ impl EnumInterString for MacroStep {
             "Wait for image".to_string(),
             "Type text".to_string(),
             "Press key".to_string(),
+            "Scroll".to_string(),
             "Wait".to_string()
         ]
     }
@@ -35,6 +36,7 @@ impl EnumInterString for MacroStep {
             MacroStep::AwaitImage(_, _) => "Wait for image",
             MacroStep::TypeText(_, _) => "Type text",
             MacroStep::PressKey(_, _) => "Press key",
+            MacroStep::Scroll(_, _) => "Scroll",
             MacroStep::WaitTime(_) => "Wait",
         }.to_string()
     }
@@ -46,6 +48,7 @@ impl EnumInterString for MacroStep {
             "Wait for image" => MacroStep::default_await_image(),
             "Type text" => MacroStep::default_type_text(),
             "Press key" => MacroStep::default_press_key(),
+            "Scroll" => MacroStep::default_scroll(),
             "Wait" => MacroStep::default_wait(),
             _ => return Err(anyhow!("Failed to convert string to MacroStep enum"))
         })
@@ -201,12 +204,39 @@ impl EnumInterString for KeyCode {
     }
 }
 
+impl EnumInterString for ScrollDirection {
+    type Err = anyhow::Error;
+
+    fn all_string_options() -> Vec<String> {
+        vec![
+            "Up".to_string(),
+            "Down".to_string()
+        ]
+    }
+
+    fn to_string(&self) -> String {
+        match self {
+            ScrollDirection::Up => "Up",
+            ScrollDirection::Down => "Down",
+        }.to_string()
+    }
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "Up" => ScrollDirection::Up,
+            "Down" => ScrollDirection::Down,
+            _ => return Err(anyhow!("Failed to convert string to ScrollDirection enum"))
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     // tests module to make sure that there are no typos n stuff in EnumInterString implementations
     // it doesn't check whether all_string_options is exaustive, because i'm not sure if that's possible
 
     use autopilot::key::KeyCode;
+    use autopilot::mouse::ScrollDirection;
 
     use super::MacroStep;
     use super::EnumInterString;
@@ -250,6 +280,28 @@ mod tests {
 
         for option in options {
             let a = KeyCode::from_str(&option).unwrap();
+            
+            let res = a.to_string();
+
+            assert!(res == option);
+        }
+    }
+    #[test]
+    fn check_scroll_direction_from_str() {
+        let options = ScrollDirection::all_string_options();
+
+        for option in options {
+            let a = ScrollDirection::from_str(&option);
+            assert!(a.is_ok());
+        }
+    }
+
+    #[test]
+    fn check_scroll_direction_to_string() {
+        let options = ScrollDirection::all_string_options();
+
+        for option in options {
+            let a = ScrollDirection::from_str(&option).unwrap();
             
             let res = a.to_string();
 

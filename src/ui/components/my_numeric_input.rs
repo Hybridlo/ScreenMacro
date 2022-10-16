@@ -1,22 +1,27 @@
+use std::{str::FromStr, fmt::Display};
+
 use iced::pure::{text_input, row, text};
 use iced_pure::Element;
 use iced_lazy::pure::{self, Component};
 use iced_native::text;
+use num::PrimInt;
 
-pub struct TimeInput<Message> {
+pub struct MyNumericInput<Message, T: PrimInt> {
     size: u16,
     placeholder: String,
-    value: u64,
-    on_change: Box<dyn Fn(u64) -> Message>,
+    second_text: String,
+    value: T,
+    on_change: Box<dyn Fn(T) -> Message>,
 }
 
-impl<Message> TimeInput<Message> {
+impl<Message, T: PrimInt> MyNumericInput<Message, T> {
     pub fn new(
         placeholder: String,
-        value: u64,
-        on_change: impl Fn(u64) -> Message + 'static
+        second_text: String,
+        value: T,
+        on_change: impl Fn(T) -> Message + 'static
     ) -> Self {
-        TimeInput { size: 24, placeholder, value, on_change: Box::new(on_change) }
+        MyNumericInput { size: 18, placeholder, second_text, value, on_change: Box::new(on_change) }
     }
 
     pub fn size(self, size: u16) -> Self {
@@ -32,9 +37,10 @@ pub enum TIEvent {
     InputChanged(String)
 }
 
-impl<Message, Renderer> Component<Message, Renderer> for TimeInput<Message>
+impl<Message, Renderer, T> Component<Message, Renderer> for MyNumericInput<Message, T>
 where
-    Renderer: text::Renderer + 'static
+    Renderer: text::Renderer + 'static,
+    T: PrimInt + FromStr + Display
 {
     type State = ();
     type Event = TIEvent;
@@ -47,10 +53,10 @@ where
         match event {
             TIEvent::InputChanged(text) => {
                 if text == "" {
-                    return Some((self.on_change)(0));
+                    return Some((self.on_change)(T::zero()));
                 }
                 
-                let num_res = text.parse::<u64>().ok()?;
+                let num_res = text.parse::<T>().ok()?;
 
                 Some((self.on_change)(num_res))
             },
@@ -66,27 +72,29 @@ where
             )
             .size(self.size)
         ).push(
-            text("ms").size(self.size)
+            text(self.second_text.clone()).size(self.size)
         )
         .into()
     }
 }
 
-impl<'a, Message, Renderer> From<TimeInput<Message>>
+impl<'a, Message, Renderer, T> From<MyNumericInput<Message, T>>
     for Element<'a, Message, Renderer>
 where
     Message: 'a,
-    Renderer: text::Renderer + 'static
+    Renderer: text::Renderer + 'static,
+    T: PrimInt + FromStr + Display + 'a
 {
-    fn from(percent_text_input: TimeInput<Message>) -> Self {
+    fn from(percent_text_input: MyNumericInput<Message, T>) -> Self {
         pure::component(percent_text_input)
     }
 }
 
-pub fn time_input<Message>(
+pub fn my_numeric_input<Message, T: PrimInt>(
     placeholder: String,
-    value: u64,
-    on_change: impl Fn(u64) -> Message + 'static
-) -> TimeInput<Message> {
-    TimeInput::new(placeholder, value, on_change) 
+    second_text: String,
+    value: T,
+    on_change: impl Fn(T) -> Message + 'static
+) -> MyNumericInput<Message, T> {
+    MyNumericInput::new(placeholder, second_text, value, on_change) 
 }

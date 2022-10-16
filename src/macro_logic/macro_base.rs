@@ -51,6 +51,7 @@ pub enum MacroStep {
     AwaitImage(Option<RgbImage>, f32),                // image name, allowed difference
     TypeText(String, Vec<Flag>),
     PressKey(key::KeyCode, Vec<Flag>),
+    Scroll(mouse::ScrollDirection, u32),
     WaitTime(u64)
 }
 
@@ -62,6 +63,7 @@ impl MacroStep {
             MacroStep::AwaitImage(img_data, allowed_diff) => MacroStep::execute_await_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, allowed_diff)?,
             MacroStep::TypeText(text, flags) => MacroStep::execute_type_text(text, flags)?,
             MacroStep::PressKey(key, flags) => MacroStep::execute_press_key(key, flags)?,
+            MacroStep::Scroll(direction, amount) => MacroStep::execute_scroll(direction, amount)?,
             MacroStep::WaitTime(milliseconds) => MacroStep::execute_wait(*milliseconds)?,
         }
 
@@ -86,6 +88,10 @@ impl MacroStep {
 
     pub fn default_press_key() -> MacroStep {
         MacroStep::PressKey(key::KeyCode::LeftArrow, vec![])
+    }
+
+    pub fn default_scroll() -> MacroStep {
+        MacroStep::Scroll(mouse::ScrollDirection::Down, 0)
     }
 
     pub fn default_wait() -> MacroStep {
@@ -135,6 +141,12 @@ impl MacroStep {
 
     fn execute_press_key(key: &key::KeyCode, flags: &Vec<Flag>) -> Result<()> {
         key::tap(&key::Code(*key), &flags[..], 0, 0);
+
+        Ok(())
+    }
+
+    fn execute_scroll(direction: &mouse::ScrollDirection, clicks: &u32) -> Result<()> {
+        mouse::scroll(*direction, *clicks);
 
         Ok(())
     }
