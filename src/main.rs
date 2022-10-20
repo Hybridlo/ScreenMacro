@@ -3,7 +3,7 @@ mod macro_logic;
 
 use anyhow::Result;
 use ui::Base;
-use iced::{Settings, pure::Sandbox};
+use iced::{Settings, pure::Application};
 
 
 fn main() -> Result<()> {

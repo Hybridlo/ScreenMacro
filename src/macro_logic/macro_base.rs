@@ -3,8 +3,10 @@ use autopilot::key::Flag;
 use iced::widget::svg::{Svg, Handle};
 use image::{RgbImage, DynamicImage};
 use autopilot::{bitmap, mouse, geometry::Point, key};
+use async_std::task::sleep as async_sleep;
 
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -21,10 +23,24 @@ impl Macro {
         Default::default()
     }
 
-    pub fn execute_macro(&self) -> Result<()> {
-        for step in self.macro_steps.iter() {
-            step.dispatch()?
+    pub async fn execute_macro(macro_data: Macro, continue_signal: Arc<Mutex<bool>>, is_running: Arc<Mutex<bool>>) -> Result<()> {
+        for step in macro_data.macro_steps.iter() {
+            match step.dispatch() {
+                Ok(_) => (),
+                Err(err) => {
+                    *(is_running.lock().unwrap()) = false;
+                    return Err(err);
+                },
+            };
+            
+            async_sleep(Duration::from_secs(1)).await;
+            
+            if *(continue_signal.lock().unwrap()) == false {
+                break;
+            }
         }
+
+        *(is_running.lock().unwrap()) = false;
         
         Ok(())
     }
@@ -115,6 +131,8 @@ impl MacroStep {
                 mouse::click(mouse::Button::Left, None);
                 break;
             }
+
+            sleep(Duration::from_millis(300))
         }
 
         Ok(())
@@ -128,6 +146,8 @@ impl MacroStep {
             if let Some(_) = screen.find_bitmap(&target_img_bitmap, Some(*allowed_diff as f64), None, None) {
                 break;
             }
+
+            sleep(Duration::from_millis(300))
         }
 
         Ok(())

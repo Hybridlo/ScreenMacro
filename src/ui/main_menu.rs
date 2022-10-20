@@ -1,27 +1,19 @@
-use iced::{pure::{column, text, button, container, text_input}, Length, Alignment, alignment::Horizontal};
-use iced_pure::Element;
-use iced_lazy::pure::{self, Component};
-use iced_native::text;
+use iced::Command;
+use iced::pure::{column, text, button, container, text_input, Element};
+use iced::{Length, Alignment, alignment::Horizontal};
 use iced_aw::pure::{Modal, Card};
+use anyhow::Result;
 
-use crate::ui::style::TextButton;
+use super::style::TextButton;
 
-pub struct MainMenu<Message> {
+#[derive(Default)]
+pub struct MainMenu {
     show_new_macro: bool,
-    new_macro_name: String,
-    on_new_macro: Box<dyn Fn(String) -> Message>
+    pub new_macro_name: String
 }
 
-impl<Message> MainMenu<Message> {
-    pub fn new(
-        on_new_macro: impl Fn(String) -> Message + 'static
-    ) -> Self {
-        MainMenu { show_new_macro: false, new_macro_name: Default::default(), on_new_macro: Box::new(on_new_macro) }
-    }
-}
-
-#[derive(Clone)]
-pub enum MMEvent {
+#[derive(Debug, Clone)]
+pub enum MainMenuMessage {
     NewButtonClicked,
     LoadButtonClicked,
     NewMacroDismissed,
@@ -29,30 +21,23 @@ pub enum MMEvent {
     NewMacroOk
 }
 
-impl<Message, Renderer> Component<Message, Renderer> for MainMenu<Message>
-where
-    Renderer: text::Renderer + iced_native::text::Renderer<Font = iced_native::Font> + 'static
-{
-    type State = ();
-    type Event = MMEvent;
-
-    fn update(
-        &mut self,
-        _state: &mut Self::State,
-        event: Self::Event,
-    ) -> Option<Message> {
+impl MainMenu {
+    pub fn update(&mut self, event: MainMenuMessage) -> Result<Command<MainMenuMessage>> {
         match event {
-            MMEvent::NewButtonClicked => self.show_new_macro = true,
-            MMEvent::LoadButtonClicked => (),
-            MMEvent::NewMacroDismissed => { self.show_new_macro = false; self.new_macro_name = "".to_string() },
-            MMEvent::MacroNameUpdate(name) => self.new_macro_name = name,
-            MMEvent::NewMacroOk => return Some((self.on_new_macro)(self.new_macro_name.clone())),
+            MainMenuMessage::NewButtonClicked => self.show_new_macro = true,
+            MainMenuMessage::LoadButtonClicked => (),
+            MainMenuMessage::NewMacroDismissed => { self.show_new_macro = false; self.new_macro_name = "".to_string() },
+            MainMenuMessage::MacroNameUpdate(name) => self.new_macro_name = name,
+            MainMenuMessage::NewMacroOk => {    // handled both here and above
+                self.new_macro_name = String::new();
+                self.show_new_macro = false;
+            },
         }
 
-        return None;
+        Ok(Command::none())
     }
 
-    fn view(&self, _state: &Self::State) -> Element<Self::Event, Renderer> {
+    pub fn view(&self) -> Element<MainMenuMessage> {
         let title = container(
             column()
                 .push(
@@ -93,7 +78,7 @@ where
                             .size(28)
                     )
                     .style(TextButton::Normal)
-                    .on_press(MMEvent::NewButtonClicked)
+                    .on_press(MainMenuMessage::NewButtonClicked)
                 )
 
                 .push(
@@ -102,7 +87,7 @@ where
                             .size(28)
                     )
                     .style(TextButton::Normal)
-                    .on_press(MMEvent::LoadButtonClicked)
+                    .on_press(MainMenuMessage::LoadButtonClicked)
                 )
 
                 .height(Length::Shrink)
@@ -127,46 +112,29 @@ where
                     text_input(
                         "Enter macro name",
                         &self.new_macro_name,
-                        MMEvent::MacroNameUpdate
+                        MainMenuMessage::MacroNameUpdate
                     )
-                    .on_submit(MMEvent::NewMacroOk)
+                    .on_submit(MainMenuMessage::NewMacroOk)
                 )
                 .foot(
                     container(
                         button(
                             text("Ok")
                         )
-                        .on_press(MMEvent::NewMacroOk)
+                        .on_press(MainMenuMessage::NewMacroOk)
                     )
                     .width(Length::Fill)
                     .center_x()
                 )
                 .max_width(300)
-                .on_close(MMEvent::NewMacroDismissed)
+                .on_close(MainMenuMessage::NewMacroDismissed)
                 .into()
             })
-            .backdrop(MMEvent::NewMacroDismissed)
-            .on_esc(MMEvent::NewMacroDismissed)
+            .backdrop(MainMenuMessage::NewMacroDismissed)
+            .on_esc(MainMenuMessage::NewMacroDismissed)
             .into();
         }
 
         content.into()
     }
-}
-
-impl<'a, Message, Renderer> From<MainMenu<Message>>
-    for Element<'a, Message, Renderer>
-where
-    Message: 'a,
-    Renderer: text::Renderer + iced_native::text::Renderer<Font = iced_native::Font> + 'static
-{
-    fn from(main_menu: MainMenu<Message>) -> Self {
-        pure::component(main_menu)
-    }
-}
-
-pub fn main_menu<Message>(
-    on_new_macro: impl Fn(String) -> Message + 'static
-) -> MainMenu<Message> {
-    MainMenu::new(on_new_macro)
 }
