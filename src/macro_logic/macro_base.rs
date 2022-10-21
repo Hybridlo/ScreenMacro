@@ -8,13 +8,15 @@ use async_std::task::sleep as async_sleep;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+
+use super::Settings;
 
 #[derive(Default, Clone, Debug)]
 pub struct Macro {
     pub macro_name: String,
     version: u64,
-    settings: String,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
+    pub settings: Settings,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
     pub macro_steps: Vec<MacroStep>
 }
 
@@ -25,8 +27,8 @@ impl Macro {
 
     pub async fn execute_macro(macro_data: Macro, continue_signal: Arc<Mutex<bool>>, is_running: Arc<Mutex<bool>>) -> Result<()> {
         for step in macro_data.macro_steps.iter() {
-            match step.dispatch() {
-                Ok(_) => (),
+            match step.dispatch(&macro_data.settings) {
+                Ok(stop_early) => if stop_early { break },
                 Err(err) => {
                     *(is_running.lock().unwrap()) = false;
                     return Err(err);
@@ -72,18 +74,18 @@ pub enum MacroStep {
 }
 
 impl MacroStep {
-    pub fn dispatch(&self) -> Result<()> {
+    pub fn dispatch(&self, settings: &Settings) -> Result<bool> {
         match self {
             MacroStep::Launch(command) => MacroStep::execute_launch(command)?,
-            MacroStep::ClickImage(img_data, point, allowed_diff) => MacroStep::execute_click_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, point, allowed_diff)?,
-            MacroStep::AwaitImage(img_data, allowed_diff) => MacroStep::execute_await_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, allowed_diff)?,
+            MacroStep::ClickImage(img_data, point, allowed_diff) => return MacroStep::execute_click_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, point, allowed_diff, settings),
+            MacroStep::AwaitImage(img_data, allowed_diff) => return MacroStep::execute_await_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, allowed_diff, settings),
             MacroStep::TypeText(text, flags) => MacroStep::execute_type_text(text, flags)?,
             MacroStep::PressKey(key, flags) => MacroStep::execute_press_key(key, flags)?,
             MacroStep::Scroll(direction, amount) => MacroStep::execute_scroll(direction, amount)?,
             MacroStep::WaitTime(milliseconds) => MacroStep::execute_wait(*milliseconds)?,
         }
 
-        Ok(())
+        Ok(false)
     }
 
     pub fn default_launch() -> MacroStep {
@@ -120,8 +122,10 @@ impl MacroStep {
         Ok(())
     }
 
-    fn execute_click_image(img_data: &RgbImage, point: &ClickPoint, allowed_diff: &f32) -> Result<()> {
+    fn execute_click_image(img_data: &RgbImage, point: &ClickPoint, allowed_diff: &f32, settings: &Settings) -> Result<bool> {
+        let start_time = Instant::now();
         let target_img_bitmap = bitmap::Bitmap::new(DynamicImage::ImageRgb8(img_data.clone()), None);
+
         loop {
             let screen = bitmap::capture_screen()?;
             
@@ -132,14 +136,22 @@ impl MacroStep {
                 break;
             }
 
-            sleep(Duration::from_millis(300))
+            sleep(Duration::from_millis(300));
+
+            println!("{}", start_time.elapsed().as_secs());
+
+            if start_time.elapsed().as_secs() > settings.step_timeout_seconds {
+                return Ok(settings.break_whole_macro)
+            }
         }
 
-        Ok(())
+        Ok(false)
     }
 
-    fn execute_await_image(img_data: &RgbImage, allowed_diff: &f32) -> Result<()> {
+    fn execute_await_image(img_data: &RgbImage, allowed_diff: &f32, settings: &Settings) -> Result<bool> {
+        let start_time = Instant::now();
         let target_img_bitmap = bitmap::Bitmap::new(DynamicImage::ImageRgb8(img_data.clone()), None);
+
         loop {
             let screen = bitmap::capture_screen()?;
             
@@ -147,10 +159,14 @@ impl MacroStep {
                 break;
             }
 
-            sleep(Duration::from_millis(300))
+            sleep(Duration::from_millis(300));
+
+            if start_time.elapsed().as_secs() > settings.step_timeout_seconds {
+                return Ok(settings.break_whole_macro)
+            }
         }
 
-        Ok(())
+        Ok(false)
     }
 
     fn execute_type_text(text: &str, flags: &Vec<Flag>) -> Result<()> {

@@ -5,8 +5,8 @@ use iced_lazy::pure::{self, Component};
 use iced_native::text;
 use image::RgbImage;
 
-use crate::{macro_logic::{MacroStep, EnumInterString}, ui::style::BorderedContainer};
-use crate::ui::style::TextButton;
+use crate::macro_logic::{MacroStep, EnumInterString, Settings};
+use crate::ui::style::{TextButton, BorderedContainer};
 
 use super::{file_choose_component, percent_text_input, image_input_component, my_numeric_input, modifiers_chooser_component};
 
@@ -159,7 +159,7 @@ where
 
             MSCEvent::EmitError(error) => return Some((self.on_error)(error)),
             MSCEvent::RunCurrentCommand => {
-                if let Err(err) = self.value.dispatch() {
+                if let Err(err) = self.value.dispatch(&Settings::new(10, false)) {
                     return Some((self.on_error)("An error occured while trying to execute the command:\n".to_string() + &err.to_string()))
                 }
             },
