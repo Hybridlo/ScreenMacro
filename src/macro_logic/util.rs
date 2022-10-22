@@ -21,7 +21,7 @@ impl EnumInterString for MacroStep {
         vec![
             "Launch program".to_string(),
             "Click an image".to_string(),
-            "Wait for image".to_string(),
+            "Move to image".to_string(),
             "Type text".to_string(),
             "Press key".to_string(),
             "Scroll".to_string(),
@@ -33,7 +33,7 @@ impl EnumInterString for MacroStep {
         match self {
             MacroStep::Launch(_) => "Launch program",
             MacroStep::ClickImage(_, _, _) => "Click an image",
-            MacroStep::AwaitImage(_, _) => "Wait for image",
+            MacroStep::MoveToImage(_, _, _) => "Move to image",
             MacroStep::TypeText(_, _) => "Type text",
             MacroStep::PressKey(_, _) => "Press key",
             MacroStep::Scroll(_, _) => "Scroll",
@@ -45,7 +45,7 @@ impl EnumInterString for MacroStep {
         Ok(match s {
             "Launch program" => MacroStep::default_launch(),
             "Click an image" => MacroStep::default_click_image(),
-            "Wait for image" => MacroStep::default_await_image(),
+            "Move to image" => MacroStep::default_await_image(),
             "Type text" => MacroStep::default_type_text(),
             "Press key" => MacroStep::default_press_key(),
             "Scroll" => MacroStep::default_scroll(),

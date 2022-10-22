@@ -66,7 +66,7 @@ pub enum ClickPoint {
 pub enum MacroStep {
     Launch(String),                         // has the command
     ClickImage(Option<RgbImage>, ClickPoint, f32),    // image name, click point, allowed difference
-    AwaitImage(Option<RgbImage>, f32),                // image name, allowed difference
+    MoveToImage(Option<RgbImage>, ClickPoint, f32),                // image name, click point which is a move point here, allowed difference
     TypeText(String, Vec<Flag>),
     PressKey(key::KeyCode, Vec<Flag>),
     Scroll(mouse::ScrollDirection, u32),
@@ -78,7 +78,7 @@ impl MacroStep {
         match self {
             MacroStep::Launch(command) => MacroStep::execute_launch(command)?,
             MacroStep::ClickImage(img_data, point, allowed_diff) => return MacroStep::execute_click_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, point, allowed_diff, settings),
-            MacroStep::AwaitImage(img_data, allowed_diff) => return MacroStep::execute_await_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, allowed_diff, settings),
+            MacroStep::MoveToImage(img_data, move_point, allowed_diff) => return MacroStep::execute_move_to_image(img_data.as_ref().ok_or(anyhow!("Missing image data"))?, move_point, allowed_diff, settings),
             MacroStep::TypeText(text, flags) => MacroStep::execute_type_text(text, flags)?,
             MacroStep::PressKey(key, flags) => MacroStep::execute_press_key(key, flags)?,
             MacroStep::Scroll(direction, amount) => MacroStep::execute_scroll(direction, amount)?,
@@ -97,7 +97,7 @@ impl MacroStep {
     }
 
     pub fn default_await_image() -> MacroStep {
-        MacroStep::AwaitImage(None, 0.0)
+        MacroStep::MoveToImage(None, Default::default(), 0.0)
     }
 
     pub fn default_type_text() -> MacroStep {
@@ -123,6 +123,18 @@ impl MacroStep {
     }
 
     fn execute_click_image(img_data: &RgbImage, point: &ClickPoint, allowed_diff: &f32, settings: &Settings) -> Result<bool> {
+        let move_res = MacroStep::execute_move_to_image(img_data, point, allowed_diff, settings)?;
+
+        if move_res {
+            return Ok(true);
+        }
+
+        mouse::click(mouse::Button::Left, None);
+
+        Ok(false)
+    }
+
+    fn execute_move_to_image(img_data: &RgbImage, move_point: &ClickPoint, allowed_diff: &f32, settings: &Settings) -> Result<bool> {
         let start_time = Instant::now();
         let target_img_bitmap = bitmap::Bitmap::new(DynamicImage::ImageRgb8(img_data.clone()), None);
 
@@ -130,36 +142,14 @@ impl MacroStep {
             let screen = bitmap::capture_screen()?;
             
             if let Some(found_point) = screen.find_bitmap(&target_img_bitmap, Some(*allowed_diff as f64), None, None) {
-                let (mult_x, mult_y) = point.to_mults();
+                let (mult_x, mult_y) = move_point.to_mults();
                 mouse::move_to(Point::new(found_point.x + mult_x * (img_data.width() as f64), found_point.y + mult_y * (img_data.height() as f64)))?;
-                mouse::click(mouse::Button::Left, None);
                 break;
             }
 
             sleep(Duration::from_millis(300));
 
             println!("{}", start_time.elapsed().as_secs());
-
-            if start_time.elapsed().as_secs() > settings.step_timeout_seconds {
-                return Ok(settings.break_whole_macro)
-            }
-        }
-
-        Ok(false)
-    }
-
-    fn execute_await_image(img_data: &RgbImage, allowed_diff: &f32, settings: &Settings) -> Result<bool> {
-        let start_time = Instant::now();
-        let target_img_bitmap = bitmap::Bitmap::new(DynamicImage::ImageRgb8(img_data.clone()), None);
-
-        loop {
-            let screen = bitmap::capture_screen()?;
-            
-            if let Some(_) = screen.find_bitmap(&target_img_bitmap, Some(*allowed_diff as f64), None, None) {
-                break;
-            }
-
-            sleep(Duration::from_millis(300));
 
             if start_time.elapsed().as_secs() > settings.step_timeout_seconds {
                 return Ok(settings.break_whole_macro)

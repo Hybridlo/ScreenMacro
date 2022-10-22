@@ -79,7 +79,7 @@ where
             MSCEvent::ChangeImage(new_image) => {
                 match &self.value {
                     MacroStep::ClickImage(_, click_point, allowed_difference) => self.value = MacroStep::ClickImage(Some(new_image), click_point.clone(), allowed_difference.clone()),
-                    MacroStep::AwaitImage(_, allowed_difference) => self.value = MacroStep::AwaitImage(Some(new_image), allowed_difference.clone()),
+                    MacroStep::MoveToImage(_, move_point, allowed_difference) => self.value = MacroStep::MoveToImage(Some(new_image), move_point.clone(), allowed_difference.clone()),
                     _ => unreachable!("MSCEvent::ChangeImage dispatched when the inner value is {:?}", self.value)
                 }
             },
@@ -87,6 +87,7 @@ where
             MSCEvent::ChangePoint => {
                 match &self.value {
                     MacroStep::ClickImage(image, old_point, allowed_difference) => self.value = MacroStep::ClickImage(image.clone(), old_point.next(), allowed_difference.clone()),
+                    MacroStep::MoveToImage(image, old_point, allowed_difference) => self.value = MacroStep::MoveToImage(image.clone(), old_point.next(), allowed_difference.clone()),
                     _ => unreachable!("MSCEvent::ChangePoint dispatched when the inner value is {:?}", self.value)
                 }
             },
@@ -94,7 +95,7 @@ where
             MSCEvent::ChangeAllowedDifference(new_allowed_diff) => {
                 match &self.value {
                     MacroStep::ClickImage(image, click_point, _) => self.value = MacroStep::ClickImage(image.clone(), click_point.clone(), ((100 - new_allowed_diff) as f32) / 100.0),
-                    MacroStep::AwaitImage(image, _) => self.value = MacroStep::AwaitImage(image.clone(), ((100 - new_allowed_diff) as f32) / 100.0),
+                    MacroStep::MoveToImage(image, move_point, _) => self.value = MacroStep::MoveToImage(image.clone(), move_point.clone(), ((100 - new_allowed_diff) as f32) / 100.0),
                     _ => unreachable!("MSCEvent::ChangeAllowedDifference dispatched when the inner value is {:?}", self.value)
                 }
             },
@@ -228,7 +229,7 @@ where
                 )
             },
 
-            MacroStep::AwaitImage(curr_image, allowed_difference) => {
+            MacroStep::MoveToImage(curr_image, move_point, allowed_difference) => {
                 res = res.push(
                     container(
                         image_input_component(
@@ -238,6 +239,16 @@ where
                         )
                     )
                     .width(Length::FillPortion(8))
+                )
+                .push(
+                    container(
+                        button(
+                            move_point.svg()
+                        )
+                        .on_press(MSCEvent::ChangePoint)
+                        .style(TextButton::Normal)
+                    )
+                    .width(Length::Shrink)
                 )
                 .push(
                     container(
