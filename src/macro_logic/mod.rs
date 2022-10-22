@@ -1,5 +1,6 @@
 mod util;
 mod macro_base;
+mod macro_serde;
 mod macro_settings;
 
 pub use macro_base::Macro;

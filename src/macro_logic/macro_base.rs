@@ -4,25 +4,34 @@ use iced::widget::svg::{Svg, Handle};
 use image::{RgbImage, DynamicImage};
 use autopilot::{bitmap, mouse, geometry::Point, key};
 use async_std::task::sleep as async_sleep;
+use serde::{Serialize, Deserialize};
 
+use std::fs::File;
+use std::path::PathBuf;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
 use super::Settings;
+use super::macro_serde::MacroSerializable;
 
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Macro {
     pub macro_name: String,
-    version: u64,
-    pub settings: Settings,   // for now, there might be macro-specific, macrostep-specific and global settings later, will see
+    pub settings: Settings,
     pub macro_steps: Vec<MacroStep>
 }
 
+impl Default for Macro {
+    fn default() -> Self {
+        Self { macro_name: "Unnamed".to_string(), settings: Default::default(), macro_steps: Default::default() }
+    }
+}
+
 impl Macro {
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new(macro_name: String, settings: Settings, macro_steps: Vec<MacroStep>) -> Self {
+        Macro { macro_name, settings, macro_steps }
     }
 
     pub async fn execute_macro(macro_data: Macro, continue_signal: Arc<Mutex<bool>>, is_running: Arc<Mutex<bool>>) -> Result<()> {
@@ -46,9 +55,25 @@ impl Macro {
         
         Ok(())
     }
+
+    pub fn save_file(&self, file_path: &PathBuf) -> Result<()> {
+        let serializable = MacroSerializable::from_normal(self.clone())?;
+
+        let file = File::create(file_path)?;
+        ciborium::ser::into_writer(&serializable, file)?;
+        
+        Ok(())
+    }
+
+    pub fn load_file(file_path: &PathBuf) -> Result<Self> {
+        let file = File::open(file_path)?;
+        let serializable = ciborium::de::from_reader::<MacroSerializable, _>(file)?;
+
+        serializable.to_normal()
+    }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub enum ClickPoint {
     TopLeft,
     TopMiddle,
@@ -66,7 +91,7 @@ pub enum ClickPoint {
 pub enum MacroStep {
     Launch(String),                         // has the command
     ClickImage(Option<RgbImage>, ClickPoint, f32),    // image name, click point, allowed difference
-    MoveToImage(Option<RgbImage>, ClickPoint, f32),                // image name, click point which is a move point here, allowed difference
+    MoveToImage(Option<RgbImage>, ClickPoint, f32),   // image name, click point which is a move point here, allowed difference
     TypeText(String, Vec<Flag>),
     PressKey(key::KeyCode, Vec<Flag>),
     Scroll(mouse::ScrollDirection, u32),

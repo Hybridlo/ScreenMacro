@@ -2,6 +2,9 @@ use iced::pure::{Application, container, text, Element};
 use iced::{Length, executor, Command};
 use iced_aw::pure::{Card, Modal};
 use iced_pure::button;
+use rfd::FileDialog;
+
+use crate::macro_logic::Macro;
 
 use super::{MacroMenu, MacroMenuMessage, MainMenu, MainMenuMessage};
 
@@ -47,19 +50,33 @@ impl Application for Base {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             BaseMessage::DismissError => self.curr_error = None,
-            BaseMessage::MainMessage(MainMenuMessage::NewMacroOk) => {
-                self.macro_menu.macro_data.macro_name = self.main_menu.new_macro_name.clone();
+            BaseMessage::MainMessage(MainMenuMessage::NewButtonClicked) => {
                 self.selected = WindowShowing::MacroMenu;
 
-                match self.main_menu.update(MainMenuMessage::NewMacroOk) {
+                match self.main_menu.update(MainMenuMessage::NewButtonClicked) {
                     Ok(com) => return com.map(BaseMessage::MainMessage),
                     Err(err) => self.curr_error = Some(err.to_string()),
                 }
             },
-            BaseMessage::MacroMessage(MacroMenuMessage::BackPressed) => {
+            BaseMessage::MainMessage(MainMenuMessage::LoadButtonClicked) => {
+                self.selected = WindowShowing::MacroMenu;
+
+                if let Some(path) = FileDialog::new().add_filter("ScreenMacro binary file", &["smbf"]).pick_file() {
+                    match Macro::load_file(&path) {
+                        Ok(macro_data) => self.macro_menu.macro_data = macro_data,
+                        Err(err) => self.curr_error = Some(err.to_string()),
+                    }
+                }
+
+                match self.main_menu.update(MainMenuMessage::LoadButtonClicked) {
+                    Ok(com) => return com.map(BaseMessage::MainMessage),
+                    Err(err) => self.curr_error = Some(err.to_string()),
+                }
+            }
+            BaseMessage::MacroMessage(MacroMenuMessage::BackConfirmed) => {
                 self.selected = WindowShowing::Start;
 
-                match self.macro_menu.update(MacroMenuMessage::BackPressed) {
+                match self.macro_menu.update(MacroMenuMessage::BackConfirmed) {
                     Ok(com) => return com.map(BaseMessage::MacroMessage),
                     Err(err) => self.curr_error = Some(err.to_string()),
                 }
