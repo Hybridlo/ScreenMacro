@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 mod ui;
 mod macro_logic;
 
